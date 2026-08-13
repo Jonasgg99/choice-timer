@@ -67,6 +67,13 @@
             ".write": "auth != null && auth.uid === $uid",
             ".validate": "newData.hasChild('handle')"
           }
+        },
+
+        "messages": {
+          "$messageId": {
+            ".write": "auth != null && !data.exists() && newData.child('uid').val() === auth.uid && root.child('rooms').child($roomId).child('participants').child(auth.uid).exists()",
+            ".validate": "newData.hasChildren(['uid', 'handle', 'text', 'ts']) && newData.child('uid').val() === auth.uid && newData.child('handle').isString() && newData.child('text').isString() && newData.child('text').val().length > 0 && newData.child('text').val().length <= 280 && newData.child('ts').isNumber()"
+          }
         }
       }
     }
