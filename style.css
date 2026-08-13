@@ -150,15 +150,72 @@ select:focus {
   cursor: pointer;
 }
 
+.button-row {
+  display: flex;
+  gap: 10px;
+  margin-top: 24px;
+}
+
+.button-row .primary-btn,
+.button-row .secondary-btn {
+  margin-top: 0;
+}
+
 .error {
   color: var(--danger);
   font-size: 0.85rem;
   margin-top: 12px;
 }
 
+.share-status {
+  margin-top: 14px;
+  padding: 10px 14px;
+  border-radius: var(--radius);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  color: var(--text-dim);
+  font-size: 0.85rem;
+  text-align: center;
+}
+
+/* Group room */
+
+.participant-bar {
+  max-width: 420px;
+  width: 100%;
+  margin: 0 0 16px;
+  padding: 8px 14px;
+  border-radius: var(--radius);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  color: var(--text-dim);
+  font-size: 0.8rem;
+  text-align: center;
+}
+
+.option-btn {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+}
+
+.option-btn .tally {
+  color: var(--text-dim);
+  font-size: 0.85rem;
+  font-weight: 500;
+  flex-shrink: 0;
+}
+
+.option-btn.my-vote {
+  border-color: var(--accent);
+  background: var(--surface-2);
+}
+
 /* Countdown view */
 
-#view-countdown {
+#view-countdown,
+#view-waiting {
   text-align: center;
 }
 

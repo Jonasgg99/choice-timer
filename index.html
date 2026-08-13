@@ -10,6 +10,8 @@
 
 <main id="app">
 
+  <div id="participant-bar" class="participant-bar hidden"></div>
+
   <section id="view-setup" class="view">
     <h1>Choice Timer</h1>
     <p class="tagline">Make the call before you overthink it.</p>
@@ -67,8 +69,18 @@
       </select>
     </div>
 
-    <button type="button" id="start-btn" class="primary-btn">Start</button>
+    <div class="button-row">
+      <button type="button" id="start-btn" class="primary-btn">Start</button>
+      <button type="button" id="setup-share-btn" class="secondary-btn">Share with a group</button>
+    </div>
+    <button type="button" id="ask-group-btn" class="primary-btn hidden">Ask the group</button>
     <p id="setup-error" class="error hidden"></p>
+    <p id="setup-share-status" class="share-status hidden"></p>
+  </section>
+
+  <section id="view-waiting" class="view hidden">
+    <p class="question-display">Waiting for the host to ask a question&hellip;</p>
+    <p id="waiting-hint" class="extend-info"></p>
   </section>
 
   <section id="view-countdown" class="view hidden">
@@ -77,6 +89,7 @@
     <p id="extend-info" class="extend-info hidden"></p>
     <div id="options-container" class="options-container"></div>
     <button type="button" id="extend-btn" class="secondary-btn hidden"></button>
+    <button type="button" id="countdown-share-btn" class="link-btn">Share this room</button>
   </section>
 
   <section id="view-result" class="view hidden">
@@ -85,6 +98,7 @@
     <p id="result-answer" class="result-answer"></p>
     <p id="result-meta" class="result-meta"></p>
     <button type="button" id="restart-btn" class="primary-btn">Start over</button>
+    <button type="button" id="new-question-btn" class="secondary-btn hidden">Ask the group a new question</button>
   </section>
 
 </main>

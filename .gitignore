@@ -13,3 +13,6 @@ Thumbs.db
 
 # Node (if this project ever grows one)
 node_modules/
+
+# Claude Code runtime state (not the launch.json config, just ephemeral session files)
+.claude/scheduled_tasks.lock

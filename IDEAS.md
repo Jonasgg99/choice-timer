@@ -19,32 +19,50 @@ Ordered by priority (highest first) — my judgment call, balancing effort, how 
 ### 2. Simple chat below the voting area (M)
 *Depends on idea #1 shipping first.* A lightweight chat/message thread under the options in a group room, so participants can talk through the decision ("I'm fine with either", "let's do sushi") without leaving the app. Reuses the same room/participant/handle plumbing from the sharing feature — just another live-synced list under `/rooms/{roomId}/messages`, keyed by the same anonymous `uid` and Stand-name handle. No new backend concept, just more of the one #1 already introduces.
 
-### 3. Post-choice satisfaction check (S-M)
+### 3. Queue multiple questions before inviting the group (M)
+*Depends on idea #1.* Let the host compose several questions up front (e.g. "starter, main, dessert" or a whole trip's worth of decisions) before sharing the room link, so the group moves through them without the host having to compose live each time. Fits naturally into the existing room/question separation — just a list of pending questions on the room instead of one at a time. Note: this is one of the places the app starts to resemble Kahoot's shape (host composes ahead of time, group joins a room, works through a sequence) — worth being deliberate about, see the note in RESEARCH.md/discussion; the decision-under-pressure framing (no scoring, no "correct" answer) is what keeps it a different tool, not a quiz platform.
+
+### 4. Image (and other file) attachments on options (M-L)
+*Depends on idea #1.* Let an option carry an image (or other small file) alongside its text — useful for visual choices like restaurants, outfits, or destinations. Meaningfully bigger than it looks: needs file storage (Firebase Storage, a new dependency beyond the Realtime Database already in use), upload UI, size/type limits, and some thought about moderation since a public room with unauthenticated-but-anonymous uploads is easier to abuse than plain text. Worth doing once the core room feature has proven itself, not before.
+
+### 5. Advanced option: collaborative question/option authoring in group rooms (M-L)
+*Depends on idea #1.* An opt-in, host-enabled "advanced" setting that lets participants suggest or add to the question/options themselves, instead of the current default of host-only authorship. Bigger than it looks: the room's Firebase security rules deliberately restrict question/option writes to the host (tightened in the post-launch security review — see `FIREBASE-RULES.json`), so this needs a real rules change — e.g. a room-level `collaborativeAuthoring: true` flag the rules check to relax the host-only requirement when the host has explicitly turned it on — not just a UI toggle. Should default off.
+
+### 6. "Toss a coin" / "Roll the dice" as an alternative resolution (M)
+For Yes/No questions, an alternative "Toss a coin" interaction; for multi-option questions, "Roll the dice" — a more playful, tactile alternative to just tapping an option or the app silently auto-picking. Leans directly into the [Levitt coin-flip research](RESEARCH.md#levitts-coin-flip-experiment) already grounding this app's premise — could reskin the existing auto-pick resolution moment (both solo and group modes) with a small physical-feeling animation instead of an instant reveal, reinforcing the "let something outside yourself decide" framing rather than just being a random-number generator.
+
+### 7. Post-choice satisfaction check (S-M)
 After landing on the result screen, ask "Happy with this?" (thumbs / yes-no). Mirrors the follow-up methodology from [Levitt's coin-flip experiment](RESEARCH.md#levitts-coin-flip-experiment). Cheap, and directly validated by real research. v1 = immediate gut-check only; a delayed re-check (e.g. a day later) would need persistence + a reason to return, which is more than this app currently does — flag as a separate, bigger idea if wanted.
 
-### 4. Follow-through prompt (S)
+### 8. Follow-through prompt (S)
 Right after the result, a lightweight "if-then" prompt: "When will you do this?" with quick-pick chips (Now / Today / This week). Directly implements the [Gollwitzer implementation-intentions effect](RESEARCH.md#implementation-intentions) (d=0.65 in meta-analysis) — cheap to build, strong evidence behind it.
 
-### 5. Satisficing-reinforcing copy pass (XS)
+### 9. Satisficing-reinforcing copy pass (XS)
 Wording nudge across result/timeout screens so the app reads as "good enough, move on" rather than implying it found the objectively correct answer — consistent with the [maximizer/satisficer research](RESEARCH.md#maximizers-vs-satisficers). Trivial effort, immediate polish.
 
-### 6. Gentler default timeout escalation (S)
+### 10. Gentler default timeout escalation (S)
 [Time-pressure research](RESEARCH.md#time-pressure-and-decision-quality) is mixed on whether hard pressure improves or hurts decisions — heavy pressure can spike anxiety. Consider a softer default alarm/flash, with a more intense "urgent mode" as an opt-in rather than the default.
 
-### 7. Mute toggle for the timeout alarm (XS)
+### 11. Mute toggle for the timeout alarm (XS)
 Public-use practicality — cheap, obviously useful, no dependencies.
 
-### 8. Choice history (M)
+### 12. Choice history (M)
 Log past questions, options, chosen answer, and how it resolved (tapped / overtime / auto-picked), stored in `localStorage`. Fully client-side, no account or backend needed. More effort than it looks (schema + a view for it) — best done after the satisfaction check exists, so ratings can be stored alongside each entry.
 
-### 9. Setup-time question presets (S)
+### 13. Custom URLs (S-M)
+Two related but separate concerns worth scoping individually when picked up: (a) human-readable/memorable room codes instead of random 6-character strings (e.g. host picks a slug, or auto-generated word-based codes), and (b) a custom domain for the app itself instead of the default `jonasgg99.github.io/choice-timer` GitHub Pages URL.
+
+### 14. Setup-time question presets (S)
 Preset categories ("Food", "This or that", "Big decision") to prefill common option sets. Lower priority now that the rotating placeholder already nudges toward different use cases — this would be a smaller marginal improvement.
 
-### 10. Keyboard shortcuts (XS)
+### 15. Keyboard shortcuts (XS)
 Enter to start, number keys to pick an option. Nice-to-have polish, not blocking anything.
 
-### 11. PWA manifest for "add to home screen" (S)
+### 16. PWA manifest for "add to home screen" (S)
 Worth doing once the app's feature set feels more settled — installability matters more once there's a reason to open it often.
+
+### 17. Consider renaming the project/repo to "Laterbase" (decision only — rename itself is quick)
+Naming idea floated: "Laterbase" as a possible new name (a pun on Firebase, now that the app has one, plus "deciding things later"). Not acted on — just logged for a deliberate decision at some point. GitHub's repo transfer/rename keeps full history and auto-redirects old links, so there's no real cost to doing this whenever it's decided (see earlier discussion on repo transfers in this project).
 
 ### Superseded
 - ~~Shareable result as copyable text~~ — folded into idea #1 above; a real share link is a strictly better version of this.
