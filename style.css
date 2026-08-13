@@ -335,3 +335,48 @@ body.timeout-flash {
   color: var(--text-dim);
   font-size: 0.85rem;
 }
+
+.post-result-block {
+  margin-top: 28px;
+  padding-top: 20px;
+  border-top: 1px solid var(--border);
+}
+
+.post-result-question {
+  color: var(--text-dim);
+  font-size: 0.9rem;
+  margin: 0 0 12px;
+}
+
+.chip-row {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.chip-btn {
+  padding: 8px 16px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+
+.chip-btn.active {
+  border-color: var(--accent);
+  background: var(--surface-2);
+  color: var(--accent);
+}
+
+.satisfaction-ack {
+  color: var(--text-dim);
+  font-size: 0.9rem;
+}
+
+#add-to-calendar {
+  display: block;
+  margin-top: 12px;
+}

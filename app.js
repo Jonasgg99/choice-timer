@@ -18,6 +18,7 @@
     extensionLength: $('extension-length'),
     startBtn: $('start-btn'),
     setupError: $('setup-error'),
+    muteAlarm: $('mute-alarm'),
     setupShareBtn: $('setup-share-btn'),
     setupShareStatus: $('setup-share-status'),
     askGroupBtn: $('ask-group-btn'),
@@ -89,6 +90,7 @@
   }
 
   function beep(freq = 880, durationMs = 150) {
+    if (els.muteAlarm.checked) return;
     const ctx = ensureAudioCtx();
     const osc = ctx.createOscillator();
     const gain = ctx.createGain();
@@ -299,10 +301,12 @@
   // ---------- result view ----------
 
   const metaText = {
-    tapped: 'You picked this one.',
+    tapped: 'Good enough — go with it.',
     overtime: "Time ran out, but you still made the call.",
-    'auto-picked': "Time ran out — the app picked this one for you.",
+    'auto-picked': "No time left to overthink it — this one's it.",
   };
+
+  const REVEAL_DELAY_MS = 450;
 
   function finish(answer, meta) {
     if (state.rafId) cancelAnimationFrame(state.rafId);
@@ -310,14 +314,18 @@
     stopBeeping();
     document.body.classList.remove('timeout-flash');
 
-    els.resultAnswer.textContent = answer;
-    els.resultMeta.textContent = metaText[meta] || '';
-    showView('result');
+    // Small pause before switching views so the reveal doesn't feel instant.
+    setTimeout(() => {
+      els.resultAnswer.textContent = answer;
+      els.resultMeta.textContent = metaText[meta] || '';
+      window.__choiceTimerFollowup.reset();
+      showView('result');
 
-    successChime();
-    els.resultCheck.classList.remove('pop');
-    void els.resultCheck.offsetWidth; // restart animation on repeat choices
-    els.resultCheck.classList.add('pop');
+      successChime();
+      els.resultCheck.classList.remove('pop');
+      void els.resultCheck.offsetWidth; // restart animation on repeat choices
+      els.resultCheck.classList.add('pop');
+    }, REVEAL_DELAY_MS);
   }
 
   els.restartBtn.addEventListener('click', () => {
@@ -433,6 +441,13 @@
       });
     });
   }
+
+  // ---------- mute toggle ----------
+
+  els.muteAlarm.checked = localStorage.getItem('choiceTimerMuted') === 'true';
+  els.muteAlarm.addEventListener('change', () => {
+    localStorage.setItem('choiceTimerMuted', els.muteAlarm.checked);
+  });
 
   // ---------- init ----------
   setMode('yesno');

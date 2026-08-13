@@ -334,6 +334,7 @@ function ensureAudioCtx() {
 }
 
 function beep(freq = 220, durationMs = 250) {
+  if (document.getElementById('mute-alarm').checked) return;
   const ctx = ensureAudioCtx();
   const osc = ctx.createOscillator();
   const gain = ctx.createGain();
@@ -433,11 +434,14 @@ function renderOptionsWithTallies(container, options, votes, onVote) {
 }
 
 const resultMetaText = {
-  voted: "The group decided.",
+  voted: "The group decided — good enough, go with it.",
   "tie-break": "It was a tie — settled at random.",
   "auto-picked": "Nobody voted in time — picked at random.",
   overtime: "Time ran out, but a vote came in.",
 };
+
+const REVEAL_DELAY_MS = 450;
+let lastRenderedResultKey = null;
 
 function renderRoom() {
   const room = latestRoom;
@@ -450,6 +454,7 @@ function renderRoom() {
   $("countdown-share-btn").classList.add("hidden"); // superseded by the persistent button above
 
   const iAmHost = isHost();
+  if (room.state !== "result") lastRenderedResultKey = null;
 
   if (room.state === "waiting") {
     stopBeeping();
@@ -508,18 +513,27 @@ function renderRoom() {
   }
 
   if (room.state === "result") {
+    const resultKey = JSON.stringify(room.result);
+    if (resultKey === lastRenderedResultKey) return; // already showing this exact result
+    lastRenderedResultKey = resultKey;
+
     stopBeeping();
     document.body.classList.remove("timeout-flash");
-    $("result-answer").textContent = room.result.answer;
-    $("result-meta").textContent = resultMetaText[room.result.meta] || "";
-    $("new-question-btn").classList.toggle("hidden", !iAmHost);
-    showView("result");
 
-    successChime();
-    const check = $("result-check");
-    check.classList.remove("pop");
-    void check.offsetWidth;
-    check.classList.add("pop");
+    // Small pause before switching views so the reveal doesn't feel instant.
+    setTimeout(() => {
+      $("result-answer").textContent = room.result.answer;
+      $("result-meta").textContent = resultMetaText[room.result.meta] || "";
+      $("new-question-btn").classList.toggle("hidden", !iAmHost);
+      window.__choiceTimerFollowup.reset({ showPersonal: false });
+      showView("result");
+
+      successChime();
+      const check = $("result-check");
+      check.classList.remove("pop");
+      void check.offsetWidth;
+      check.classList.add("pop");
+    }, REVEAL_DELAY_MS);
   }
 }
 

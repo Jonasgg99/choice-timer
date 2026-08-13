@@ -52,6 +52,11 @@
         Auto-pick an option if I don't choose in time
       </label>
 
+      <label class="checkbox-row">
+        <input type="checkbox" id="mute-alarm">
+        Mute the timeout alarm
+      </label>
+
       <label for="max-extensions">Time extensions allowed</label>
       <select id="max-extensions">
         <option value="0">0</option>
@@ -98,12 +103,33 @@
     <p class="result-label" id="result-label">You chose</p>
     <p id="result-answer" class="result-answer"></p>
     <p id="result-meta" class="result-meta"></p>
+
+    <div class="post-result-block">
+      <p class="post-result-question">Happy with this?</p>
+      <div id="satisfaction-buttons" class="chip-row">
+        <button type="button" id="satisfaction-yes" class="chip-btn">🙂 Yeah</button>
+        <button type="button" id="satisfaction-no" class="chip-btn">🙁 Not really</button>
+      </div>
+      <p id="satisfaction-ack" class="satisfaction-ack hidden"></p>
+    </div>
+
+    <div class="post-result-block">
+      <p class="post-result-question">When will you do this?</p>
+      <div id="follow-through-chips" class="chip-row">
+        <button type="button" class="chip-btn" data-when="now">Now</button>
+        <button type="button" class="chip-btn" data-when="today">Today</button>
+        <button type="button" class="chip-btn" data-when="week">This week</button>
+      </div>
+      <a id="add-to-calendar" class="link-btn hidden" href="#" download="choice-timer.ics">Add to calendar</a>
+    </div>
+
     <button type="button" id="restart-btn" class="primary-btn">Start over</button>
     <button type="button" id="new-question-btn" class="secondary-btn hidden">Ask the group a new question</button>
   </section>
 
 </main>
 
+<script src="followup.js"></script>
 <script src="app.js"></script>
 </body>
 </html>
