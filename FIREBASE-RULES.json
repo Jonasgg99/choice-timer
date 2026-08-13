@@ -1,0 +1,74 @@
+{
+  "rules": {
+    "rooms": {
+      "$roomId": {
+        ".read": "auth != null",
+        ".write": false,
+
+        "hostUid": {
+          ".write": "auth != null && (!data.exists() || data.val() === auth.uid)",
+          ".validate": "newData.isString() && newData.val() === auth.uid"
+        },
+
+        "question": {
+          ".write": "auth != null && auth.uid === root.child('rooms').child($roomId).child('hostUid').val()",
+          ".validate": "newData.isString() && newData.val().length <= 140"
+        },
+        "options": {
+          ".write": "auth != null && auth.uid === root.child('rooms').child($roomId).child('hostUid').val()"
+        },
+        "durationMs": {
+          ".write": "auth != null && auth.uid === root.child('rooms').child($roomId).child('hostUid').val()",
+          ".validate": "newData.isNumber() && newData.val() > 0 && newData.val() <= 3600000"
+        },
+        "extensionMs": {
+          ".write": "auth != null && auth.uid === root.child('rooms').child($roomId).child('hostUid').val()",
+          ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 600000"
+        },
+        "maxExtensions": {
+          ".write": "auth != null && auth.uid === root.child('rooms').child($roomId).child('hostUid').val()",
+          ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 10"
+        },
+        "extensionsRemaining": {
+          ".write": "auth != null && auth.uid === root.child('rooms').child($roomId).child('hostUid').val()",
+          ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 10"
+        },
+        "autoPick": {
+          ".write": "auth != null && auth.uid === root.child('rooms').child($roomId).child('hostUid').val()",
+          ".validate": "newData.isBoolean()"
+        },
+
+        "state": {
+          ".write": "auth != null && (auth.uid === root.child('rooms').child($roomId).child('hostUid').val() || ((newData.val() === 'timeout_waiting' || newData.val() === 'result') && data.val() !== 'result' && data.parent().child('endTime').val() <= now))",
+          ".validate": "newData.isString() && (newData.val() === 'waiting' || newData.val() === 'countdown' || newData.val() === 'timeout_waiting' || newData.val() === 'result')"
+        },
+        "endTime": {
+          ".write": "auth != null && auth.uid === root.child('rooms').child($roomId).child('hostUid').val()"
+        },
+        "allVotedAt": {
+          ".write": "auth != null && auth.uid === root.child('rooms').child($roomId).child('hostUid').val() && (newData.val() === null || !data.exists())",
+          ".validate": "newData.val() === null || newData.isNumber()"
+        },
+        "result": {
+          ".write": "auth != null && (auth.uid === root.child('rooms').child($roomId).child('hostUid').val() || (data.parent().child('state').val() !== 'result' && data.parent().child('endTime').val() <= now))",
+          ".validate": "newData.val() === null || (newData.hasChild('answer') && newData.hasChild('meta') && newData.child('answer').isString() && newData.child('answer').val().length <= 200)"
+        },
+
+        "votes": {
+          ".write": "auth != null && auth.uid === root.child('rooms').child($roomId).child('hostUid').val()",
+          "$uid": {
+            ".write": "auth != null && auth.uid === $uid",
+            ".validate": "newData.isNumber()"
+          }
+        },
+
+        "participants": {
+          "$uid": {
+            ".write": "auth != null && auth.uid === $uid",
+            ".validate": "newData.hasChild('handle')"
+          }
+        }
+      }
+    }
+  }
+}

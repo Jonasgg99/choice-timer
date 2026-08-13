@@ -18,6 +18,12 @@
     extensionLength: $('extension-length'),
     startBtn: $('start-btn'),
     setupError: $('setup-error'),
+    setupShareBtn: $('setup-share-btn'),
+    setupShareStatus: $('setup-share-status'),
+    askGroupBtn: $('ask-group-btn'),
+
+    // waiting (group rooms)
+    viewWaiting: $('view-waiting'),
 
     // countdown
     viewCountdown: $('view-countdown'),
@@ -26,6 +32,7 @@
     extendInfo: $('extend-info'),
     optionsContainer: $('options-container'),
     extendBtn: $('extend-btn'),
+    countdownShareBtn: $('countdown-share-btn'),
 
     // result
     viewResult: $('view-result'),
@@ -34,6 +41,7 @@
     resultAnswer: $('result-answer'),
     resultMeta: $('result-meta'),
     restartBtn: $('restart-btn'),
+    newQuestionBtn: $('new-question-btn'),
   };
 
   const state = {
@@ -99,6 +107,7 @@
 
   function showView(name) {
     els.viewSetup.classList.toggle('hidden', name !== 'setup');
+    els.viewWaiting.classList.toggle('hidden', name !== 'waiting');
     els.viewCountdown.classList.toggle('hidden', name !== 'countdown');
     els.viewResult.classList.toggle('hidden', name !== 'result');
   }
@@ -314,6 +323,59 @@
   els.restartBtn.addEventListener('click', () => {
     showView('setup');
   });
+
+  // ---------- group rooms (lazy-loaded, only when actually used) ----------
+
+  els.setupShareBtn.addEventListener('click', async () => {
+    els.setupShareBtn.disabled = true;
+    try {
+      const room = await import('./room.js');
+      await room.createRoomFromSetupForm();
+    } catch (err) {
+      console.error(err);
+      showSetupError('Could not create the room — check your connection and try again.');
+    } finally {
+      els.setupShareBtn.disabled = false;
+    }
+  });
+
+  els.countdownShareBtn.addEventListener('click', async () => {
+    els.countdownShareBtn.disabled = true;
+    try {
+      const room = await import('./room.js');
+      await room.shareCurrentCountdown();
+    } catch (err) {
+      console.error(err);
+    } finally {
+      els.countdownShareBtn.disabled = false;
+    }
+  });
+
+  // Minimal surface room.js uses to read/stop a solo countdown when converting
+  // it into a shared room, and to reuse this file's view switching.
+  window.__choiceTimer = {
+    showView,
+    getLocalSnapshot() {
+      return {
+        question: state.question,
+        options: state.options,
+        remainingMs: state.endTime ? state.endTime - Date.now() : null,
+        autoPick: state.autoPick,
+        extensionMs: state.extensionMs,
+        extensionsRemaining: state.extensionsRemaining,
+      };
+    },
+    stopLocalCountdown() {
+      if (state.rafId) cancelAnimationFrame(state.rafId);
+      state.rafId = null;
+      stopBeeping();
+      document.body.classList.remove('timeout-flash');
+    },
+  };
+
+  if (location.hash.startsWith('#room=')) {
+    import('./room.js').then((room) => room.joinRoomFromHash());
+  }
 
   // ---------- rotating placeholder ----------
 
