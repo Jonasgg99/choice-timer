@@ -5,7 +5,7 @@ import {
   getAuth, signInAnonymously, onAuthStateChanged,
 } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-auth.js";
 import {
-  getDatabase, ref, set, update, get, remove, onValue, onDisconnect,
+  getDatabase, ref, set, update, get, remove, onValue, onDisconnect, push, query, limitToLast,
 } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-database.js";
 import { firebaseConfig } from "./firebase-config.js";
 import { generateHandle } from "./handles.js";
@@ -28,6 +28,8 @@ let latestParticipants = {};
 let myHandle = null;
 let rafId = null;
 let beepIntervalId = null;
+let latestMessages = {};
+let unsubscribeMessages = null;
 
 const ROOM_CODE_CHARS = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"; // no ambiguous chars
 const GRACE_PERIOD_MS = 5000;
@@ -608,6 +610,44 @@ function tick() {
   rafId = requestAnimationFrame(tick);
 }
 
+// ---------- chat ----------
+
+async function sendChatMessage(text) {
+  const trimmed = text.trim();
+  if (!trimmed || !roomId) return;
+  const messageRef = push(ref(db, `rooms/${roomId}/messages`));
+  await set(messageRef, {
+    uid,
+    handle: myHandle,
+    text: trimmed,
+    ts: now(),
+  });
+}
+
+function renderChatMessages() {
+  const container = $("chat-messages");
+  const entries = Object.values(latestMessages).sort((a, b) => a.ts - b.ts);
+
+  container.innerHTML = "";
+  entries.forEach((m) => {
+    const row = document.createElement("div");
+    row.className = m.uid === uid ? "chat-message chat-message-own" : "chat-message";
+
+    const sender = document.createElement("span");
+    sender.className = "chat-message-sender";
+    sender.textContent = m.handle;
+
+    const text = document.createElement("span");
+    text.className = "chat-message-text";
+    text.textContent = m.text;
+
+    row.appendChild(sender);
+    row.appendChild(text);
+    container.appendChild(row);
+  });
+  container.scrollTop = container.scrollHeight;
+}
+
 // ---------- subscription ----------
 
 let unsubscribeRoom = null;
@@ -624,6 +664,13 @@ function subscribe(id) {
     renderRoom();
     maybeClaimAbandonedHost(latestRoom);
   });
+  unsubscribeMessages = onValue(
+    query(ref(db, `rooms/${id}/messages`), limitToLast(200)),
+    (snap) => {
+      latestMessages = snap.val() || {};
+      renderChatMessages();
+    },
+  );
   if (!rafId) tick();
 }
 
@@ -635,8 +682,10 @@ export async function leaveRoom() {
 
   if (unsubscribeRoom) unsubscribeRoom();
   if (unsubscribeParticipants) unsubscribeParticipants();
+  if (unsubscribeMessages) unsubscribeMessages();
   unsubscribeRoom = null;
   unsubscribeParticipants = null;
+  unsubscribeMessages = null;
 
   if (rafId) cancelAnimationFrame(rafId);
   rafId = null;
@@ -654,6 +703,7 @@ export async function leaveRoom() {
   roomId = null;
   latestRoom = null;
   latestParticipants = {};
+  latestMessages = {};
   myHandle = null;
   lastRenderedResultKey = null;
 
@@ -663,6 +713,9 @@ export async function leaveRoom() {
   $("setup-share-status").classList.add("hidden");
   $("setup-share-status").textContent = "";
   $("restart-btn").textContent = "Start over";
+  $("chat-panel").classList.add("hidden");
+  $("chat-messages").innerHTML = "";
+  $("chat-input").value = "";
 
   history.replaceState(null, "", location.pathname + location.search);
 }
@@ -685,6 +738,14 @@ async function enterRoom(id) {
     if (form.options.length < 2) return showSetupError("Add at least two options.");
     if (!form.durationMs) return showSetupError("Enter a valid timer length.");
     await postQuestionToRoom(form);
+  };
+
+  $("chat-panel").classList.remove("hidden");
+  $("chat-form").onsubmit = (e) => {
+    e.preventDefault();
+    const input = $("chat-input");
+    sendChatMessage(input.value);
+    input.value = "";
   };
 }
 
