@@ -31,6 +31,30 @@ let beepIntervalId = null;
 
 const ROOM_CODE_CHARS = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"; // no ambiguous chars
 const GRACE_PERIOD_MS = 5000;
+const RECENT_ROOMS_KEY = "choiceTimerRecentRooms";
+const MAX_RECENT_ROOMS = 5;
+
+// "Active" is read from live presence — a room with nobody currently
+// connected just doesn't show up here, no separate expiry/TTL bookkeeping
+// needed. See app.js's export for exactly when this is checked.
+function getRecentRooms() {
+  try {
+    const raw = localStorage.getItem(RECENT_ROOMS_KEY);
+    return raw ? JSON.parse(raw) : [];
+  } catch {
+    return [];
+  }
+}
+
+function rememberRoom(id) {
+  try {
+    const rest = getRecentRooms().filter((r) => r.roomId !== id);
+    rest.unshift({ roomId: id, joinedAt: Date.now() });
+    localStorage.setItem(RECENT_ROOMS_KEY, JSON.stringify(rest.slice(0, MAX_RECENT_ROOMS)));
+  } catch {
+    // localStorage unavailable (private browsing, quota, etc.) — not critical
+  }
+}
 
 function ensureAuth() {
   if (!authReadyPromise) {
@@ -393,6 +417,31 @@ function isHost() {
   return latestRoom && latestRoom.hostUid === uid;
 }
 
+// If the current host is no longer present (left, or their tab disconnected),
+// any present participant may claim hostUid per the security rules — but only
+// one of us should actually try. Every client computes "am I the earliest
+// joiner still here" from the same synced participants data, so in the
+// well-behaved case exactly one client attempts the claim, and it converges
+// on the oldest remaining participant without the rules needing to verify
+// that mathematically (Realtime Database rules can't aggregate/loop).
+function maybeClaimAbandonedHost(room) {
+  if (!room || !room.hostUid || !roomId) return;
+  if (room.hostUid === uid) return; // already host
+  const participants = latestParticipants || {};
+  if (!(uid in participants)) return; // not fully joined yet
+  if (room.hostUid in participants) return; // current host still here
+
+  const myJoinedAt = participants[uid].joinedAt;
+  const iAmOldest = Object.entries(participants).every(
+    ([pid, p]) => pid === uid || p.joinedAt >= myJoinedAt,
+  );
+  if (!iAmOldest) return;
+
+  set(ref(db, `rooms/${roomId}/hostUid`), uid).catch(() => {
+    // lost the race to another equally-old participant, or rules rejected it — fine
+  });
+}
+
 function renderParticipantBar() {
   const bar = $("participant-bar");
   const entries = Object.values(latestParticipants || {});
@@ -563,10 +612,12 @@ function subscribe(id) {
   unsubscribeRoom = onValue(ref(db, `rooms/${id}`), (snap) => {
     latestRoom = snap.val();
     renderRoom();
+    maybeClaimAbandonedHost(latestRoom);
   });
   unsubscribeParticipants = onValue(ref(db, `rooms/${id}/participants`), (snap) => {
     latestParticipants = snap.val() || {};
     renderRoom();
+    maybeClaimAbandonedHost(latestRoom);
   });
   if (!rafId) tick();
 }
@@ -611,6 +662,8 @@ async function enterRoom(id) {
   roomId = id;
   await init();
   await joinAsParticipant(id);
+  rememberRoom(id);
+  $("recent-rooms").classList.add("hidden");
   subscribe(id);
 
   $("extend-btn").onclick = () => extendRoom();
@@ -689,4 +742,54 @@ export async function joinRoomFromHash() {
   const match = location.hash.match(/^#room=([A-Za-z0-9]+)$/);
   if (!match) return;
   await enterRoom(match[1]);
+}
+
+// Called only when app.js already knows localStorage has remembered rooms,
+// so a first-time visitor never triggers this (and never loads Firebase).
+export async function checkRecentRooms() {
+  const remembered = getRecentRooms();
+  if (remembered.length === 0) return;
+  await init();
+
+  const results = await Promise.all(remembered.map(async (r) => {
+    try {
+      const snap = await get(ref(db, `rooms/${r.roomId}/participants`));
+      const participants = snap.val() || {};
+      return { roomId: r.roomId, count: Object.keys(participants).length };
+    } catch {
+      return { roomId: r.roomId, count: 0 };
+    }
+  }));
+
+  const live = results.filter((r) => r.count > 0);
+  const container = $("recent-rooms");
+  if (live.length === 0 || roomId) {
+    // roomId set means we've since joined a room ourselves (e.g. via a
+    // #room= link that resolved while this check was in flight) — the
+    // recent-rooms prompt would be irrelevant/confusing on top of that.
+    container.classList.add("hidden");
+    return;
+  }
+
+  container.innerHTML = "";
+  const label = document.createElement("p");
+  label.className = "post-result-question";
+  label.textContent = "Rejoin a room:";
+  container.appendChild(label);
+
+  const row = document.createElement("div");
+  row.className = "chip-row";
+  live.forEach((r) => {
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "chip-btn";
+    btn.textContent = `${r.roomId} · ${r.count} here`;
+    btn.addEventListener("click", () => {
+      history.replaceState(null, "", `#room=${r.roomId}`);
+      enterRoom(r.roomId);
+    });
+    row.appendChild(btn);
+  });
+  container.appendChild(row);
+  container.classList.remove("hidden");
 }

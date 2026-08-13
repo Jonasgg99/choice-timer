@@ -6,7 +6,7 @@
         ".write": false,
 
         "hostUid": {
-          ".write": "auth != null && (!data.exists() || data.val() === auth.uid)",
+          ".write": "auth != null && (!data.exists() || data.val() === auth.uid || (!root.child('rooms').child($roomId).child('participants').child(data.val()).exists() && root.child('rooms').child($roomId).child('participants').child(auth.uid).exists()))",
           ".validate": "newData.isString() && newData.val() === auth.uid"
         },
 

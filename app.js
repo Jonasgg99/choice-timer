@@ -394,6 +394,20 @@
 
   if (location.hash.startsWith('#room=')) {
     import('./room.js').then((room) => room.joinRoomFromHash());
+  } else {
+    // Only bother loading Firebase to check for rejoinable rooms if this
+    // browser has actually used group rooms before — a first-time visitor
+    // never triggers this, keeping solo mode's zero-dependency promise.
+    let hasRecentRooms = false;
+    try {
+      const raw = localStorage.getItem('choiceTimerRecentRooms');
+      hasRecentRooms = raw && JSON.parse(raw).length > 0;
+    } catch {
+      hasRecentRooms = false;
+    }
+    if (hasRecentRooms) {
+      import('./room.js').then((room) => room.checkRecentRooms());
+    }
   }
 
   // ---------- rotating placeholder ----------

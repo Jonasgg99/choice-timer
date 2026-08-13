@@ -44,6 +44,18 @@ h1 {
   font-size: 0.95rem;
 }
 
+.recent-rooms {
+  margin: 0 0 20px;
+  padding: 14px;
+  border-radius: var(--radius);
+  background: var(--surface);
+  border: 1px solid var(--border);
+}
+
+.recent-rooms .post-result-question {
+  margin: 0 0 10px;
+}
+
 label {
   display: block;
   font-size: 0.85rem;

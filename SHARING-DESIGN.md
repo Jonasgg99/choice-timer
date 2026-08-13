@@ -1,6 +1,6 @@
 # Group sharing — design
 
-Design for shareable, live group-decision rooms. Referenced from [IDEAS.md](IDEAS.md) idea #1. Implemented on the `feature/group-voting-rooms` branch (not yet merged to `main`); this doc reflects the current implementation, refined a few times after real use and a security review.
+Design for shareable, live group-decision rooms. Referenced from [IDEAS.md](IDEAS.md)'s Shipped section. Merged to `main` and live; this doc reflects the current implementation, refined a few times after real use and a security review.
 
 ## Goal
 
@@ -23,7 +23,7 @@ Firebase **Anonymous Authentication** gives each browser a stable random `uid` o
 
 ```
 /rooms/{roomId}
-  hostUid: string                 # set once at room creation, immutable after
+  hostUid: string                 # set at creation; reassignable if the host leaves — see "Host departure" below
   question: string
   options: string[]
   durationMs, extensionMs, maxExtensions, autoPick   # set by host per-question
@@ -65,6 +65,21 @@ Resolution is computed client-side by whichever connected client notices the con
 Firebase's standard presence pattern (`.info/connected` + `onDisconnect().remove()`) keeps the participant list accurate even when someone just closes the tab, without needing an explicit "leave" action. No input required to get a handle — one is assigned client-side the moment a participant joins.
 
 Handle pool: **JoJo's Bizarre Adventure Stand names** (e.g. "Star Platinum", "Killer Queen", "Gold Experience") as the primary source — a curated list of ~45 well-known Stands, comfortably more than any realistic room size, assigned without repeats within a room. If a room somehow exhausts the list (more participants than Stand names left unused), it falls back to the original adjective + animal generator (e.g. "Silver Fox") for any overflow, so a handle is always available.
+
+## Host departure and ownership transfer
+
+If the host's presence entry disappears (they left via "Start over," or their tab disconnected) while other participants remain, `hostUid` transfers automatically — the room doesn't become stuck without anyone able to post questions or extend.
+
+Realtime Database rules can't loop over a dynamic list to verify "genuinely the participant with the earliest `joinedAt`" — there's no aggregate/min query in the rules language — so enforcement is split from convention:
+
+- **The rule enforces the safe part**: `hostUid` becomes reassignable by *any current participant*, but only when the existing `hostUid` is confirmed absent from `/participants`. This closes the actual security hole (a stranger hijacking a room) without needing to mathematically verify seniority. Verified directly: a non-participant cannot claim host even when the real host is gone, and a genuine participant cannot claim it while the real host is still present.
+- **The client convention decides *who***: every participant's client already has the same live `participants` data (via the existing subscription). The moment a client notices the host is gone, it checks locally whether it holds the earliest `joinedAt` among who's currently present — only that client attempts the write (`maybeClaimAbandonedHost`, wired into both of `subscribe()`'s listeners, so it reacts immediately to a presence change). Since everyone computes from identical synced data, in the honest case exactly one client attempts it and it converges on the oldest remaining participant. If two ever raced, the rule's "must be confirmed absent" guard means only the first write succeeds.
+- **Once transferred, it's transferred** — if the original host reopens a stale tab later, they're just a regular participant now, not automatically reinstated. Simpler semantics, no reconciliation needed. Confirmed: after a transfer, the original host's own client can no longer write host-only fields (`endTime`, etc.).
+- A room can never truly die as long as anyone still has the link: "oldest of who's currently present" holds trivially for a lone (re)joiner, so even a fully abandoned room revives the moment someone opens it again.
+
+## Recently-active rooms
+
+The setup screen remembers rooms you've joined (a small `localStorage` list, capped at 5, most recent first) and offers to rejoin any that are still live. "Live" is read from presence — a room with nobody currently in `/participants` just doesn't show up, no separate expiry/TTL bookkeeping needed. Checking this loads Firebase, so it's gated behind "does `localStorage` actually have a remembered room" — a first-time visitor never triggers it, keeping solo mode's zero-dependency promise intact.
 
 ## Known simplifications / risks
 
