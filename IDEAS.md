@@ -2,24 +2,16 @@
 
 Backlog of features and improvements for Choice Timer. Not a roadmap — just a place to collect ideas before deciding what to build. See [RESEARCH.md](RESEARCH.md) for the theoretical basis behind the research-grounded ideas below.
 
+Ideas move to **Shipped** as soon as they're implemented, so this file always reflects what's actually built vs. still backlog.
+
+## Shipped
+
+### Rotating placeholder text
+Typewriter-in / backspace-out animation cycling through example questions in the empty question field, to prompt users toward different use cases. Rotation set: bike ride, dinner, job application, coffee/tea, texting back, movie night, promotion, gym, apartment choice, generic yes/no. Implemented via `input.placeholder` updates on a timer loop (`cyclePlaceholder` in `app.js`), pausing while the field has a value and resuming from where it left off once cleared.
+
 ## Ideas
 
 Rough effort tags: XS (~minutes), S (~an hour), M (a session), L (multi-session).
-
-### Proposed next: rotating placeholder text (S)
-Typewriter-in / backspace-out animation cycling through example questions in the empty question field, to prompt users toward different use cases. Candidate rotation set:
-- "Should I go for a bike ride?"
-- "What should I make for dinner?"
-- "Should I apply for this job?"
-- "Coffee or tea?"
-- "Should I text them back?"
-- "What movie should we watch tonight?"
-- "Should I take the promotion?"
-- "Should I go to the gym today?"
-- "Which apartment should I pick?"
-- "Should I say yes to this?"
-
-Mechanics: type ~40-60ms/char, hold ~1.5-2s, backspace ~25-35ms/char (faster than typing), advance to next question, loop. Implemented via `input.placeholder` updates on an interval — no extra DOM needed. Stops mattering once the user types (native placeholder hides automatically).
 
 ### Post-choice satisfaction check (S-M)
 After landing on the result screen, ask "Happy with this?" (thumbs / yes-no). Mirrors the follow-up methodology from [Levitt's coin-flip experiment](RESEARCH.md#levitts-coin-flip-experiment). v1 = immediate gut-check only; a delayed re-check (e.g. a day later) would need persistence + a reason to return, which is more than this app currently does — flag as a separate, bigger idea if wanted.
