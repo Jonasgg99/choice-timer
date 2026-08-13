@@ -30,6 +30,9 @@ let rafId = null;
 let beepIntervalId = null;
 let latestMessages = {};
 let unsubscribeMessages = null;
+let chatCollapsed = false;
+let chatLastCategory = null;
+let lastSeenMessageTs = 0;
 
 const ROOM_CODE_CHARS = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"; // no ambiguous chars
 const GRACE_PERIOD_MS = 5000;
@@ -500,6 +503,9 @@ function renderRoom() {
 
   if (!room) return;
 
+  updateChatDefaultCollapse(room.state);
+  renderChatCollapseState();
+
   // Once in a room, inviting more people is always available, in every state.
   $("invite-more-btn").classList.remove("hidden");
   $("countdown-share-btn").classList.add("hidden"); // superseded by the persistent button above
@@ -624,6 +630,37 @@ async function sendChatMessage(text) {
   });
 }
 
+function chatCategoryFor(state) {
+  return (state === "countdown" || state === "timeout_waiting") ? "countdown" : "expanded";
+}
+
+// Re-derives the default collapse state only when the room moves between a
+// countdown-shaped state and a waiting/result-shaped state — so a manual
+// toggle during countdown isn't fought on every render, only reset when the
+// view genuinely changes category.
+function updateChatDefaultCollapse(state) {
+  const category = chatCategoryFor(state);
+  if (category !== chatLastCategory) {
+    chatCollapsed = category === "countdown";
+    chatLastCategory = category;
+  }
+}
+
+function renderChatCollapseState() {
+  $("chat-body").classList.toggle("hidden", chatCollapsed);
+  $("chat-toggle").setAttribute("aria-expanded", String(!chatCollapsed));
+  if (!chatCollapsed) {
+    const latestTs = Object.values(latestMessages).reduce((max, m) => Math.max(max, m.ts || 0), 0);
+    lastSeenMessageTs = Math.max(lastSeenMessageTs, latestTs);
+    $("chat-unread-dot").classList.add("hidden");
+  }
+}
+
+function setChatCollapsed(collapsed) {
+  chatCollapsed = collapsed;
+  renderChatCollapseState();
+}
+
 function renderChatMessages() {
   const container = $("chat-messages");
   const entries = Object.values(latestMessages).sort((a, b) => a.ts - b.ts);
@@ -646,6 +683,11 @@ function renderChatMessages() {
     container.appendChild(row);
   });
   container.scrollTop = container.scrollHeight;
+
+  const latestTs = entries.length ? entries[entries.length - 1].ts : 0;
+  if (chatCollapsed && latestTs > lastSeenMessageTs) {
+    $("chat-unread-dot").classList.remove("hidden");
+  }
 }
 
 // ---------- subscription ----------
@@ -704,6 +746,9 @@ export async function leaveRoom() {
   latestRoom = null;
   latestParticipants = {};
   latestMessages = {};
+  chatCollapsed = false;
+  chatLastCategory = null;
+  lastSeenMessageTs = 0;
   myHandle = null;
   lastRenderedResultKey = null;
 
@@ -747,6 +792,7 @@ async function enterRoom(id) {
     sendChatMessage(input.value);
     input.value = "";
   };
+  $("chat-toggle").onclick = () => setChatCollapsed(!chatCollapsed);
 }
 
 // ---------- public entry points, called from app.js ----------
