@@ -134,6 +134,20 @@
     <button type="button" id="new-question-btn" class="secondary-btn hidden">Ask the group a new question</button>
   </section>
 
+  <div id="chat-panel" class="chat-panel hidden">
+    <button type="button" id="chat-toggle" class="chat-toggle" aria-expanded="true">
+      Chat
+      <span id="chat-unread-dot" class="chat-unread-dot hidden"></span>
+    </button>
+    <div id="chat-body" class="chat-body">
+      <div id="chat-messages" class="chat-messages"></div>
+      <form id="chat-form" class="chat-form">
+        <input type="text" id="chat-input" class="chat-input" placeholder="Message the room&hellip;" maxlength="280" autocomplete="off">
+        <button type="submit" class="chat-send-btn">Send</button>
+      </form>
+    </div>
+  </div>
+
 </main>
 
 <script src="followup.js"></script>
