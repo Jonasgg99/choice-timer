@@ -92,17 +92,29 @@ async function copyToClipboard(text) {
 
 // Native share sheet (Messages, WhatsApp, Instagram DM, etc. — whatever's
 // installed) when available, falling back to a clipboard copy otherwise.
+// Returns "shared" | "copied" | "manual" | "cancelled" — callers that create
+// something new (a room) must treat "cancelled" as "the user backed out,
+// don't create anything."
 async function shareLink(url) {
   if (navigator.share) {
     try {
       await navigator.share({ title: "Choice Timer", text: "Join and help decide:", url });
       return "shared";
-    } catch {
-      // user cancelled, or share failed — fall through to clipboard
+    } catch (err) {
+      if (err && err.name === "AbortError") return "cancelled";
+      // other share failures fall through to clipboard
     }
   }
   const copied = await copyToClipboard(url);
   return copied ? "copied" : "manual";
+}
+
+async function shareCurrentRoomLink() {
+  const outcome = await shareLink(roomUrl(roomId));
+  if (outcome !== "shared" && outcome !== "cancelled") {
+    const url = roomUrl(roomId);
+    alert(outcome === "copied" ? `Link copied: ${url}` : `Share this link: ${url}`);
+  }
 }
 
 // ---------- reading the setup form (mirrors app.js's own local-mode logic) ----------
@@ -142,14 +154,14 @@ function showSetupError(msg) {
 
 // ---------- Firebase room operations ----------
 
-async function createRoomInFirebase(form) {
+// Sharing a room never starts its countdown by default — that's a separate,
+// explicit step (the host's own "Ask the group" action) so there's time to
+// invite people before the timer is running. `startImmediately` is only used
+// when converting an already-running solo countdown into a room, where the
+// countdown is meant to keep going, not pause.
+async function createRoomInFirebase(form, id, { startImmediately = false } = {}) {
   await init();
-  const id = randomRoomId();
 
-  // Sharing a room never starts its countdown — that's a separate, explicit
-  // step (the host's own "Ask the group" action) so there's time to invite
-  // people before the timer is running.
-  //
   // Written in two steps: security rules for every other field check the
   // room's hostUid, which isn't visible to sibling fields within one shared
   // multi-path write — it has to already exist in the database first.
@@ -162,8 +174,8 @@ async function createRoomInFirebase(form) {
     extensionMs: form.extensionMs || 15000,
     maxExtensions: form.maxExtensions || 0,
     extensionsRemaining: form.maxExtensions || 0,
-    state: "waiting",
-    endTime: null,
+    state: startImmediately ? "countdown" : "waiting",
+    endTime: startImmediately ? now() + form.durationMs : null,
   });
   return id;
 }
@@ -240,6 +252,18 @@ export async function maybeStartGracePeriod(room) {
   const allVoted = participantIds.every((pid) => pid in votes);
   if (!allVoted) return;
   if (!room.endTime || room.endTime - now() <= GRACE_PERIOD_MS) return; // already close enough to the deadline
+
+  // A tie doesn't get an early lock-in — let the full timer keep running (in
+  // case someone changes their mind, or a late joiner breaks it) rather than
+  // settling it with a random pick after only a few seconds.
+  const counts = new Array(room.options.length).fill(0);
+  Object.values(votes).forEach((idx) => {
+    if (typeof idx === "number" && counts[idx] !== undefined) counts[idx] += 1;
+  });
+  const max = Math.max(...counts);
+  const leaders = counts.filter((c) => c === max).length;
+  if (leaders > 1) return; // tied — keep counting down normally instead
+
   await set(ref(db, `rooms/${roomId}/allVotedAt`), now());
 }
 
@@ -421,6 +445,10 @@ function renderRoom() {
 
   if (!room) return;
 
+  // Once in a room, inviting more people is always available, in every state.
+  $("invite-more-btn").classList.remove("hidden");
+  $("countdown-share-btn").classList.add("hidden"); // superseded by the persistent button above
+
   const iAmHost = isHost();
 
   if (room.state === "waiting") {
@@ -534,6 +562,7 @@ async function enterRoom(id) {
 
   $("extend-btn").onclick = () => extendRoom();
   $("new-question-btn").onclick = () => requestNewQuestion();
+  $("invite-more-btn").onclick = () => shareCurrentRoomLink();
   $("ask-group-btn").onclick = async () => {
     const form = readSetupForm();
     $("setup-error").classList.add("hidden");
@@ -550,16 +579,19 @@ export async function createRoomFromSetupForm() {
   const form = readSetupForm();
   $("setup-error").classList.add("hidden");
 
-  // Sharing never starts anything — no validation needed here. The question
-  // (if any was typed) just comes along as a draft; "Ask the group" is where
-  // it actually gets validated and posted.
+  // Generate the id/link and attempt the share BEFORE touching Firebase at
+  // all — if the user backs out of the native share sheet, nothing should
+  // have been created, and they should just land back on the setup screen.
+  const id = randomRoomId();
+  const url = roomUrl(id);
+  const outcome = await shareLink(url);
+  if (outcome === "cancelled") return;
+
   const statusEl = $("setup-share-status");
   statusEl.textContent = "Creating room…";
   statusEl.classList.remove("hidden");
 
-  const id = await createRoomInFirebase(form);
-  const url = roomUrl(id);
-  const outcome = await shareLink(url);
+  await createRoomInFirebase(form, id);
   statusEl.textContent = outcome === "shared" ? "Shared — waiting for people to join…"
     : outcome === "copied" ? `Link copied: ${url}`
     : `Share this link: ${url}`;
@@ -570,34 +602,30 @@ export async function createRoomFromSetupForm() {
 
 export async function shareCurrentCountdown() {
   if (roomId) {
-    const url = roomUrl(roomId);
-    const outcome = await shareLink(url);
-    if (outcome !== "shared") alert(outcome === "copied" ? `Link copied: ${url}` : `Share this link: ${url}`);
+    // Already in a room — this is "invite more people," nothing new to create.
+    await shareCurrentRoomLink();
     return;
   }
 
   const snapshot = window.__choiceTimer.getLocalSnapshot();
   if (!snapshot.remainingMs || snapshot.remainingMs <= 0) return;
-  window.__choiceTimer.stopLocalCountdown();
 
-  const id = await createRoomInFirebase({
-    question: snapshot.question,
-    options: snapshot.options,
-    durationMs: snapshot.remainingMs,
-    autoPick: snapshot.autoPick,
-    maxExtensions: snapshot.extensionsRemaining,
-    extensionMs: snapshot.extensionMs,
-  });
-  await postQuestionToRoom({
-    question: snapshot.question,
-    options: snapshot.options,
-    durationMs: snapshot.remainingMs,
-    autoPick: snapshot.autoPick,
-    maxExtensions: snapshot.extensionsRemaining,
-    extensionMs: snapshot.extensionMs,
-  });
+  const id = randomRoomId();
   const url = roomUrl(id);
   const outcome = await shareLink(url);
+  if (outcome === "cancelled") return; // local countdown keeps running, untouched
+
+  window.__choiceTimer.stopLocalCountdown();
+
+  await createRoomInFirebase({
+    question: snapshot.question,
+    options: snapshot.options,
+    durationMs: snapshot.remainingMs,
+    autoPick: snapshot.autoPick,
+    maxExtensions: snapshot.extensionsRemaining,
+    extensionMs: snapshot.extensionMs,
+  }, id, { startImmediately: true });
+
   if (outcome !== "shared") alert(outcome === "copied" ? `Link copied: ${url}` : `Share this link: ${url}`);
 
   history.replaceState(null, "", `#room=${id}`);
