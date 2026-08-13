@@ -562,6 +562,12 @@ function renderRoom() {
   }
 
   if (room.state === "result") {
+    // Kept outside the dedup guard below: host status can change (via
+    // ownership transfer) without the result itself changing, and this
+    // needs to stay current even when we skip re-playing the reveal.
+    $("new-question-btn").classList.toggle("hidden", !iAmHost);
+    $("restart-btn").textContent = "Leave room";
+
     const resultKey = JSON.stringify(room.result);
     if (resultKey === lastRenderedResultKey) return; // already showing this exact result
     lastRenderedResultKey = resultKey;
@@ -573,7 +579,6 @@ function renderRoom() {
     setTimeout(() => {
       $("result-answer").textContent = room.result.answer;
       $("result-meta").textContent = resultMetaText[room.result.meta] || "";
-      $("new-question-btn").classList.toggle("hidden", !iAmHost);
       window.__choiceTimerFollowup.reset({ showPersonal: false });
       showView("result");
 
@@ -654,6 +659,10 @@ export async function leaveRoom() {
 
   $("participant-bar").classList.add("hidden");
   $("invite-more-btn").classList.add("hidden");
+  $("recent-rooms").classList.add("hidden");
+  $("setup-share-status").classList.add("hidden");
+  $("setup-share-status").textContent = "";
+  $("restart-btn").textContent = "Start over";
 
   history.replaceState(null, "", location.pathname + location.search);
 }

@@ -318,6 +318,7 @@
     setTimeout(() => {
       els.resultAnswer.textContent = answer;
       els.resultMeta.textContent = metaText[meta] || '';
+      els.restartBtn.textContent = 'Start over';
       window.__choiceTimerFollowup.reset({
         otherOptions: state.options.filter((o) => o !== answer),
       });
