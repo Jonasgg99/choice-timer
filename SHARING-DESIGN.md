@@ -56,7 +56,9 @@ Resolution is computed client-side by whichever connected client's clock notices
 
 ## Presence and handles
 
-Firebase's standard presence pattern (`.info/connected` + `onDisconnect().remove()`) keeps the participant list accurate even when someone just closes the tab, without needing an explicit "leave" action. Handles are generated client-side from a small built-in adjective + animal wordlist (e.g. "Silver Fox") when a participant joins — no input required.
+Firebase's standard presence pattern (`.info/connected` + `onDisconnect().remove()`) keeps the participant list accurate even when someone just closes the tab, without needing an explicit "leave" action. No input required to get a handle — one is assigned client-side the moment a participant joins.
+
+Handle pool: **JoJo's Bizarre Adventure Stand names** (e.g. "Star Platinum", "Killer Queen", "Gold Experience") as the primary source — a curated list of ~45 well-known Stands, comfortably more than any realistic room size, assigned without repeats within a room. If a room somehow exhausts the list (more participants than Stand names left unused), it falls back to the original adjective + animal generator (e.g. "Silver Fox") for any overflow, so a handle is always available.
 
 ## Known simplifications / risks
 
