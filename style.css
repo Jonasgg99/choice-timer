@@ -376,7 +376,24 @@ body.timeout-flash {
   font-size: 0.9rem;
 }
 
-#add-to-calendar {
+.follow-through-input {
   display: block;
-  margin-top: 12px;
+  width: 100%;
+  max-width: 220px;
+  margin: 12px auto 0;
+  padding: 10px 12px;
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+  font-size: 0.95rem;
+  text-align: center;
+}
+
+.calendar-links {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  margin-top: 8px;
 }

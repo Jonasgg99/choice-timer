@@ -318,7 +318,9 @@
     setTimeout(() => {
       els.resultAnswer.textContent = answer;
       els.resultMeta.textContent = metaText[meta] || '';
-      window.__choiceTimerFollowup.reset();
+      window.__choiceTimerFollowup.reset({
+        otherOptions: state.options.filter((o) => o !== answer),
+      });
       showView('result');
 
       successChime();
@@ -328,7 +330,16 @@
     }, REVEAL_DELAY_MS);
   }
 
-  els.restartBtn.addEventListener('click', () => {
+  els.restartBtn.addEventListener('click', async () => {
+    els.question.value = '';
+    if (location.hash.startsWith('#room=')) {
+      try {
+        const room = await import('./room.js');
+        await room.leaveRoom();
+      } catch (err) {
+        console.error(err);
+      }
+    }
     showView('setup');
   });
 

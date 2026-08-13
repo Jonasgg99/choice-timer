@@ -556,16 +556,55 @@ function tick() {
 
 // ---------- subscription ----------
 
+let unsubscribeRoom = null;
+let unsubscribeParticipants = null;
+
 function subscribe(id) {
-  onValue(ref(db, `rooms/${id}`), (snap) => {
+  unsubscribeRoom = onValue(ref(db, `rooms/${id}`), (snap) => {
     latestRoom = snap.val();
     renderRoom();
   });
-  onValue(ref(db, `rooms/${id}/participants`), (snap) => {
+  unsubscribeParticipants = onValue(ref(db, `rooms/${id}/participants`), (snap) => {
     latestParticipants = snap.val() || {};
     renderRoom();
   });
   if (!rafId) tick();
+}
+
+// Fully disconnects from the current room — used by "Start over," so leaving
+// doesn't quietly keep you subscribed and get yanked back in the moment the
+// host posts a new question. Does nothing if not currently in a room.
+export async function leaveRoom() {
+  if (!roomId) return;
+
+  if (unsubscribeRoom) unsubscribeRoom();
+  if (unsubscribeParticipants) unsubscribeParticipants();
+  unsubscribeRoom = null;
+  unsubscribeParticipants = null;
+
+  if (rafId) cancelAnimationFrame(rafId);
+  rafId = null;
+  stopBeeping();
+  document.body.classList.remove("timeout-flash");
+
+  const myRef = ref(db, `rooms/${roomId}/participants/${uid}`);
+  try {
+    onDisconnect(myRef).cancel();
+    await remove(myRef);
+  } catch {
+    // best-effort — presence will still self-clean via onDisconnect if this fails
+  }
+
+  roomId = null;
+  latestRoom = null;
+  latestParticipants = {};
+  myHandle = null;
+  lastRenderedResultKey = null;
+
+  $("participant-bar").classList.add("hidden");
+  $("invite-more-btn").classList.add("hidden");
+
+  history.replaceState(null, "", location.pathname + location.search);
 }
 
 async function enterRoom(id) {

@@ -118,9 +118,14 @@
       <div id="follow-through-chips" class="chip-row">
         <button type="button" class="chip-btn" data-when="now">Now</button>
         <button type="button" class="chip-btn" data-when="today">Today</button>
-        <button type="button" class="chip-btn" data-when="week">This week</button>
+        <button type="button" class="chip-btn" data-when="custom">Custom</button>
       </div>
-      <a id="add-to-calendar" class="link-btn hidden" href="#" download="choice-timer.ics">Add to calendar</a>
+      <input type="time" id="follow-through-time" class="follow-through-input hidden">
+      <input type="datetime-local" id="follow-through-datetime" class="follow-through-input hidden">
+      <div id="calendar-links" class="calendar-links hidden">
+        <a id="add-to-calendar" class="link-btn" href="#" download="choice-timer.ics">Download .ics</a>
+        <a id="add-to-google-calendar" class="link-btn" href="#" target="_blank" rel="noopener noreferrer">Add to Google Calendar</a>
+      </div>
     </div>
 
     <button type="button" id="restart-btn" class="primary-btn">Start over</button>
