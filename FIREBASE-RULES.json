@@ -45,6 +45,10 @@
         "endTime": {
           ".write": "auth != null && auth.uid === root.child('rooms').child($roomId).child('hostUid').val()"
         },
+        "allVotedAt": {
+          ".write": "auth != null && auth.uid === root.child('rooms').child($roomId).child('hostUid').val() && (newData.val() === null || !data.exists())",
+          ".validate": "newData.val() === null || newData.isNumber()"
+        },
         "result": {
           ".write": "auth != null && (auth.uid === root.child('rooms').child($roomId).child('hostUid').val() || (data.parent().child('state').val() !== 'result' && data.parent().child('endTime').val() <= now))",
           ".validate": "newData.val() === null || (newData.hasChild('answer') && newData.hasChild('meta') && newData.child('answer').isString() && newData.child('answer').val().length <= 200)"

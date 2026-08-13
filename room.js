@@ -5,7 +5,7 @@ import {
   getAuth, signInAnonymously, onAuthStateChanged,
 } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-auth.js";
 import {
-  getDatabase, ref, set, update, get, onValue, onDisconnect,
+  getDatabase, ref, set, update, get, remove, onValue, onDisconnect,
 } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-database.js";
 import { firebaseConfig } from "./firebase-config.js";
 import { generateHandle } from "./handles.js";
@@ -30,6 +30,7 @@ let rafId = null;
 let beepIntervalId = null;
 
 const ROOM_CODE_CHARS = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"; // no ambiguous chars
+const GRACE_PERIOD_MS = 5000;
 
 function ensureAuth() {
   if (!authReadyPromise) {
@@ -89,6 +90,21 @@ async function copyToClipboard(text) {
   }
 }
 
+// Native share sheet (Messages, WhatsApp, Instagram DM, etc. — whatever's
+// installed) when available, falling back to a clipboard copy otherwise.
+async function shareLink(url) {
+  if (navigator.share) {
+    try {
+      await navigator.share({ title: "Choice Timer", text: "Join and help decide:", url });
+      return "shared";
+    } catch {
+      // user cancelled, or share failed — fall through to clipboard
+    }
+  }
+  const copied = await copyToClipboard(url);
+  return copied ? "copied" : "manual";
+}
+
 // ---------- reading the setup form (mirrors app.js's own local-mode logic) ----------
 
 function readSetupForm() {
@@ -129,22 +145,25 @@ function showSetupError(msg) {
 async function createRoomInFirebase(form) {
   await init();
   const id = randomRoomId();
-  const hasQuestion = Boolean(form.question);
 
+  // Sharing a room never starts its countdown — that's a separate, explicit
+  // step (the host's own "Ask the group" action) so there's time to invite
+  // people before the timer is running.
+  //
   // Written in two steps: security rules for every other field check the
   // room's hostUid, which isn't visible to sibling fields within one shared
   // multi-path write — it has to already exist in the database first.
   await set(ref(db, `rooms/${id}/hostUid`), uid);
   await update(ref(db, `rooms/${id}`), {
     question: form.question || "",
-    options: hasQuestion ? form.options : [],
+    options: form.options || [],
     durationMs: form.durationMs || 30000,
     autoPick: !!form.autoPick,
     extensionMs: form.extensionMs || 15000,
     maxExtensions: form.maxExtensions || 0,
     extensionsRemaining: form.maxExtensions || 0,
-    state: hasQuestion ? "countdown" : "waiting",
-    endTime: hasQuestion ? now() + form.durationMs : null,
+    state: "waiting",
+    endTime: null,
   });
   return id;
 }
@@ -174,6 +193,7 @@ async function postQuestionToRoom(form) {
     endTime: now() + form.durationMs,
     votes: null,
     result: null,
+    allVotedAt: null,
   });
 }
 
@@ -185,18 +205,42 @@ async function extendRoom() {
     extensionsRemaining: room.extensionsRemaining - 1,
     endTime: now() + room.extensionMs,
     state: "countdown",
+    allVotedAt: null,
   });
 }
 
 async function castVote(optionIndex) {
   await init();
-  await set(ref(db, `rooms/${roomId}/votes/${uid}`), optionIndex);
+  const myCurrentVote = latestRoom && latestRoom.votes ? latestRoom.votes[uid] : undefined;
+  const voteRef = ref(db, `rooms/${roomId}/votes/${uid}`);
+
+  if (myCurrentVote === optionIndex) {
+    await remove(voteRef); // clicking your own selection again unselects it
+    return;
+  }
+
+  await set(voteRef, optionIndex);
   if (latestRoom && latestRoom.state === "timeout_waiting") {
     await update(ref(db, `rooms/${roomId}`), {
       state: "result",
       result: { answer: latestRoom.options[optionIndex], meta: "overtime" },
     });
   }
+}
+
+// Host-only: once every current participant has voted, start a short grace
+// window (rather than resolving instantly) so people can still change their
+// mind. The main countdown remains the backstop for anyone who never votes.
+export async function maybeStartGracePeriod(room) {
+  if (!room || room.state !== "countdown" || room.allVotedAt) return;
+  if (!isHost()) return;
+  const participantIds = Object.keys(latestParticipants || {});
+  if (participantIds.length === 0) return;
+  const votes = room.votes || {};
+  const allVoted = participantIds.every((pid) => pid in votes);
+  if (!allVoted) return;
+  if (!room.endTime || room.endTime - now() <= GRACE_PERIOD_MS) return; // already close enough to the deadline
+  await set(ref(db, `rooms/${roomId}/allVotedAt`), now());
 }
 
 async function requestNewQuestion() {
@@ -207,13 +251,17 @@ async function requestNewQuestion() {
     votes: null,
     result: null,
     endTime: null,
+    allVotedAt: null,
   });
 }
 
 export async function resolveIfExpired(room) {
   if (!room || room.state === "result") return;
   if (room.state !== "countdown" && room.state !== "timeout_waiting") return;
-  if (!room.endTime || room.endTime - now() > 0) return;
+
+  const deadlinePassed = room.endTime && room.endTime - now() <= 0;
+  const gracePassed = room.allVotedAt && now() - room.allVotedAt >= GRACE_PERIOD_MS;
+  if (!deadlinePassed && !gracePassed) return;
 
   const votes = room.votes || {};
   const counts = new Array(room.options.length).fill(0);
@@ -419,7 +467,12 @@ function renderRoom() {
       stopBeeping();
       document.body.classList.remove("timeout-flash");
       extendBtn.classList.add("hidden");
-      extendInfo.classList.add("hidden");
+      if (room.allVotedAt) {
+        extendInfo.textContent = "Everyone's voted — locking in shortly, still time to change your mind…";
+        extendInfo.classList.remove("hidden");
+      } else {
+        extendInfo.classList.add("hidden");
+      }
     }
 
     showView("countdown");
@@ -452,8 +505,9 @@ function tick() {
       timerDisplay.textContent = formatTime(remaining);
       timerDisplay.classList.toggle("warning", remaining <= 10000 && remaining > 5000);
       timerDisplay.classList.toggle("critical", remaining <= 5000 && remaining > 0);
+      maybeStartGracePeriod(room);
     }
-    if (remaining <= 0) resolveIfExpired(room);
+    resolveIfExpired(room);
   }
   rafId = requestAnimationFrame(tick);
 }
@@ -496,21 +550,19 @@ export async function createRoomFromSetupForm() {
   const form = readSetupForm();
   $("setup-error").classList.add("hidden");
 
-  if (form.question && form.options.length < 2) {
-    return showSetupError("Add at least two options.");
-  }
-  if (form.question && !form.durationMs) {
-    return showSetupError("Enter a valid timer length.");
-  }
-
+  // Sharing never starts anything — no validation needed here. The question
+  // (if any was typed) just comes along as a draft; "Ask the group" is where
+  // it actually gets validated and posted.
   const statusEl = $("setup-share-status");
   statusEl.textContent = "Creating room…";
   statusEl.classList.remove("hidden");
 
   const id = await createRoomInFirebase(form);
   const url = roomUrl(id);
-  const copied = await copyToClipboard(url);
-  statusEl.textContent = copied ? `Link copied: ${url}` : `Share this link: ${url}`;
+  const outcome = await shareLink(url);
+  statusEl.textContent = outcome === "shared" ? "Shared — waiting for people to join…"
+    : outcome === "copied" ? `Link copied: ${url}`
+    : `Share this link: ${url}`;
 
   history.replaceState(null, "", `#room=${id}`);
   await enterRoom(id);
@@ -519,8 +571,8 @@ export async function createRoomFromSetupForm() {
 export async function shareCurrentCountdown() {
   if (roomId) {
     const url = roomUrl(roomId);
-    const copied = await copyToClipboard(url);
-    alert(copied ? `Link copied: ${url}` : `Share this link: ${url}`);
+    const outcome = await shareLink(url);
+    if (outcome !== "shared") alert(outcome === "copied" ? `Link copied: ${url}` : `Share this link: ${url}`);
     return;
   }
 
@@ -536,9 +588,17 @@ export async function shareCurrentCountdown() {
     maxExtensions: snapshot.extensionsRemaining,
     extensionMs: snapshot.extensionMs,
   });
+  await postQuestionToRoom({
+    question: snapshot.question,
+    options: snapshot.options,
+    durationMs: snapshot.remainingMs,
+    autoPick: snapshot.autoPick,
+    maxExtensions: snapshot.extensionsRemaining,
+    extensionMs: snapshot.extensionMs,
+  });
   const url = roomUrl(id);
-  const copied = await copyToClipboard(url);
-  alert(copied ? `Link copied: ${url}` : `Share this link: ${url}`);
+  const outcome = await shareLink(url);
+  if (outcome !== "shared") alert(outcome === "copied" ? `Link copied: ${url}` : `Share this link: ${url}`);
 
   history.replaceState(null, "", `#room=${id}`);
   await enterRoom(id);
