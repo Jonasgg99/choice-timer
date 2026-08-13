@@ -315,6 +315,64 @@
     showView('setup');
   });
 
+  // ---------- rotating placeholder ----------
+
+  const PLACEHOLDER_QUESTIONS = [
+    'Should I go for a bike ride?',
+    'What should I make for dinner?',
+    'Should I apply for this job?',
+    'Coffee or tea?',
+    'Should I text them back?',
+    'What movie should we watch tonight?',
+    'Should I take the promotion?',
+    'Should I go to the gym today?',
+    'Which apartment should I pick?',
+    'Should I say yes to this?',
+  ];
+
+  let placeholderIndex = 0;
+
+  function schedulePlaceholder(fn, delay) {
+    setTimeout(fn, delay);
+  }
+
+  function typePlaceholder(text, i, onDone) {
+    if (els.question.value !== '') {
+      schedulePlaceholder(() => typePlaceholder(text, i, onDone), 300);
+      return;
+    }
+    els.question.placeholder = text.slice(0, i);
+    if (i < text.length) {
+      schedulePlaceholder(() => typePlaceholder(text, i + 1, onDone), 40 + Math.random() * 20);
+    } else {
+      schedulePlaceholder(onDone, 1700);
+    }
+  }
+
+  function erasePlaceholder(text, i, onDone) {
+    if (els.question.value !== '') {
+      schedulePlaceholder(() => erasePlaceholder(text, i, onDone), 300);
+      return;
+    }
+    els.question.placeholder = text.slice(0, i);
+    if (i > 0) {
+      schedulePlaceholder(() => erasePlaceholder(text, i - 1, onDone), 25 + Math.random() * 10);
+    } else {
+      onDone();
+    }
+  }
+
+  function cyclePlaceholder() {
+    const text = PLACEHOLDER_QUESTIONS[placeholderIndex];
+    typePlaceholder(text, 0, () => {
+      erasePlaceholder(text, text.length, () => {
+        placeholderIndex = (placeholderIndex + 1) % PLACEHOLDER_QUESTIONS.length;
+        cyclePlaceholder();
+      });
+    });
+  }
+
   // ---------- init ----------
   setMode('yesno');
+  cyclePlaceholder();
 })();
