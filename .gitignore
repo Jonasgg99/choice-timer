@@ -16,3 +16,6 @@ node_modules/
 
 # Claude Code runtime state (not the launch.json config, just ephemeral session files)
 .claude/scheduled_tasks.lock
+
+# Local project notes for AI assistants — kept out of the public repo
+CLAUDE.md
