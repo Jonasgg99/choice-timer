@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Choice Timer</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<main id="app">
+
+  <section id="view-setup" class="view">
+    <h1>Choice Timer</h1>
+    <p class="tagline">Make the call before you overthink it.</p>
+
+    <label for="question">Your question</label>
+    <input type="text" id="question" placeholder="Should I go for a bike ride?" maxlength="140">
+
+    <div class="mode-toggle">
+      <button type="button" id="mode-yesno" class="mode-btn active">Yes / No</button>
+      <button type="button" id="mode-custom" class="mode-btn">Custom options</button>
+    </div>
+
+    <div id="custom-options">
+      <div class="option-row">
+        <input type="text" class="option-input" placeholder="Option 1" maxlength="60">
+      </div>
+      <div class="option-row">
+        <input type="text" class="option-input" placeholder="Option 2" maxlength="60">
+      </div>
+      <button type="button" id="add-option" class="link-btn">+ Add option</button>
+    </div>
+
+    <label for="duration">Timer length</label>
+    <select id="duration">
+      <option value="10">10 seconds</option>
+      <option value="30" selected>30 seconds</option>
+      <option value="60">1 minute</option>
+      <option value="300">5 minutes</option>
+      <option value="custom">Custom…</option>
+    </select>
+    <input type="number" id="duration-custom" min="1" max="3600" placeholder="Seconds" style="display:none">
+
+    <button type="button" id="advanced-toggle" class="link-btn">Advanced settings</button>
+    <div id="advanced-panel" class="hidden">
+      <label class="checkbox-row">
+        <input type="checkbox" id="auto-pick">
+        Auto-pick an option if I don't choose in time
+      </label>
+
+      <label for="max-extensions">Time extensions allowed</label>
+      <select id="max-extensions">
+        <option value="0">0</option>
+        <option value="1">1</option>
+        <option value="2" selected>2</option>
+        <option value="3">3</option>
+        <option value="5">5</option>
+      </select>
+
+      <label for="extension-length">Extension length</label>
+      <select id="extension-length">
+        <option value="10">+10 seconds</option>
+        <option value="15" selected>+15 seconds</option>
+        <option value="30">+30 seconds</option>
+        <option value="60">+1 minute</option>
+      </select>
+    </div>
+
+    <button type="button" id="start-btn" class="primary-btn">Start</button>
+    <p id="setup-error" class="error hidden"></p>
+  </section>
+
+  <section id="view-countdown" class="view hidden">
+    <p id="countdown-question" class="question-display"></p>
+    <div id="timer-display" class="timer-display">30</div>
+    <p id="extend-info" class="extend-info hidden"></p>
+    <div id="options-container" class="options-container"></div>
+    <button type="button" id="extend-btn" class="secondary-btn hidden"></button>
+  </section>
+
+  <section id="view-result" class="view hidden">
+    <div id="result-check" class="result-check">&#10003;</div>
+    <p class="result-label" id="result-label">You chose</p>
+    <p id="result-answer" class="result-answer"></p>
+    <p id="result-meta" class="result-meta"></p>
+    <button type="button" id="restart-btn" class="primary-btn">Start over</button>
+  </section>
+
+</main>
+
+<script src="app.js"></script>
+</body>
+</html>
