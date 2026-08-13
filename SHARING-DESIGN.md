@@ -79,7 +79,7 @@ Realtime Database rules can't loop over a dynamic list to verify "genuinely the 
 
 ## Recently-active rooms
 
-The setup screen remembers rooms you've joined (a small `localStorage` list, capped at 5, most recent first) and offers to rejoin any that are still live. "Live" is read from presence — a room with nobody currently in `/participants` just doesn't show up, no separate expiry/TTL bookkeeping needed. Checking this loads Firebase, so it's gated behind "does `localStorage` actually have a remembered room" — a first-time visitor never triggers it, keeping solo mode's zero-dependency promise intact.
+The setup screen remembers rooms you've joined (a small `localStorage` list, capped at 5, most recent first) and offers to rejoin any of them — a room never truly expires (no cleanup/TTL, and it can always be revived per the ownership-transfer behavior above), so all remembered rooms are shown, not just ones with someone in them right now. Each is labeled with its live participant count read from presence (or "empty right now" if nobody's currently connected), so reopening an empty one is exactly how an abandoned room comes back to life. Checking this loads Firebase, so it's gated behind "does `localStorage` actually have a remembered room" — a first-time visitor never triggers it, keeping solo mode's zero-dependency promise intact.
 
 ## Known simplifications / risks
 

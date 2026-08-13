@@ -770,9 +770,8 @@ export async function checkRecentRooms() {
     }
   }));
 
-  const live = results.filter((r) => r.count > 0);
   const container = $("recent-rooms");
-  if (live.length === 0 || roomId) {
+  if (results.length === 0 || roomId) {
     // roomId set means we've since joined a room ourselves (e.g. via a
     // #room= link that resolved while this check was in flight) — the
     // recent-rooms prompt would be irrelevant/confusing on top of that.
@@ -780,6 +779,11 @@ export async function checkRecentRooms() {
     return;
   }
 
+  // A room never truly expires (there's no cleanup/TTL — see
+  // SHARING-DESIGN.md), so show all recently-visited rooms regardless of
+  // current headcount, not just ones with someone in them right now. An
+  // empty one just means nobody's there *at the moment* — the link still
+  // works, and reopening it is exactly how an abandoned room gets revived.
   container.innerHTML = "";
   const label = document.createElement("p");
   label.className = "post-result-question";
@@ -788,11 +792,11 @@ export async function checkRecentRooms() {
 
   const row = document.createElement("div");
   row.className = "chip-row";
-  live.forEach((r) => {
+  results.forEach((r) => {
     const btn = document.createElement("button");
     btn.type = "button";
     btn.className = "chip-btn";
-    btn.textContent = `${r.roomId} · ${r.count} here`;
+    btn.textContent = r.count > 0 ? `${r.roomId} · ${r.count} here` : `${r.roomId} · empty right now`;
     btn.addEventListener("click", () => {
       history.replaceState(null, "", `#room=${r.roomId}`);
       enterRoom(r.roomId);
