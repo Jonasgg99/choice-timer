@@ -139,8 +139,8 @@ Now remove the test participant's own entry (simulating everyone leaving) and co
 
 ```js
 // remove the participant this identity added, so the room is genuinely empty
-// (use the actual participant uid this identity joined with)
-await remove(ref(db, `rooms/${ROOM_ID}/participants/${auth.currentUser.uid}`));
+const uid = auth.currentUser.uid;
+await remove(ref(db, `rooms/${ROOM_ID}/participants/${uid}`));
 
 const results2 = {};
 
@@ -166,21 +166,35 @@ try {
   results2.deleteTooSoon = 'WRONGLY SUCCEEDED';
 } catch (e) { results2.deleteTooSoon = 'rejected: ' + e.code; }
 
-// (g) fast-forward emptyAt to simulate 31 minutes elapsed, then delete — must succeed
+// (g) emptyAt is write-once while the room stays empty (confirmed by (e)
+// above), so there's no direct way to overwrite it to a backdated value.
+// Reset it the same way a real rejoin-then-leave would: re-add a participant
+// (satisfies the null-clearing branch's precondition), clear emptyAt to
+// null, then remove the participant again so the room is empty once more.
+await set(ref(db, `rooms/${ROOM_ID}/participants/${uid}`), { handle: 'Test', joinedAt: Date.now() });
+await set(ref(db, `rooms/${ROOM_ID}/emptyAt`), null);
+await remove(ref(db, `rooms/${ROOM_ID}/participants/${uid}`));
+
+// (h) stamp emptyAt directly with a backdated value — this is a fresh
+// first-time write (emptyAt is null/absent again after (g)), so it's
+// allowed by the same rule that rejected (e)'s overwrite attempt.
 await set(ref(db, `rooms/${ROOM_ID}/emptyAt`), Date.now() - 31 * 60 * 1000);
+results2.backdatedStamp = 'succeeded';
+
+// (i) delete now that 31+ minutes have "passed" since emptyAt — must succeed
 try {
   await remove(ref(db, `rooms/${ROOM_ID}`));
   results2.deleteAfterExpiry = 'succeeded';
 } catch (e) { results2.deleteAfterExpiry = 'rejected: ' + e.code; }
 
-// (h) confirm the room is actually gone
+// (j) confirm the room is actually gone
 const snap = await get(ref(db, `rooms/${ROOM_ID}`));
 results2.roomGone = !snap.exists();
 
 JSON.stringify(results2);
 ```
 
-Expected: `deleteBeforeStamped` rejected, `stampWhileEmpty` succeeded, `restampRejected` rejected, `deleteTooSoon` rejected, `deleteAfterExpiry` succeeded, `roomGone` is `true`.
+Expected: `deleteBeforeStamped` rejected, `stampWhileEmpty` succeeded, `restampRejected` rejected, `deleteTooSoon` rejected, `backdatedStamp` succeeded, `deleteAfterExpiry` succeeded, `roomGone` is `true`.
 
 - [ ] **Step 5: Commit**
 
