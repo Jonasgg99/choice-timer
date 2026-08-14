@@ -396,6 +396,8 @@
   if (location.hash.startsWith('#room=')) {
     import('./room.js').then((room) => room.joinRoomFromHash());
   } else {
+    els.question.focus();
+
     // Only bother loading Firebase to check for rejoinable rooms if this
     // browser has actually used group rooms before — a first-time visitor
     // never triggers this, keeping solo mode's zero-dependency promise.
