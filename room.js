@@ -38,10 +38,12 @@ const ROOM_CODE_CHARS = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"; // no ambiguous char
 const GRACE_PERIOD_MS = 5000;
 const RECENT_ROOMS_KEY = "choiceTimerRecentRooms";
 const MAX_RECENT_ROOMS = 5;
+const EMPTY_ROOM_TTL_MS = 30 * 60 * 1000; // 30 minutes
 
-// "Active" is read from live presence — a room with nobody currently
-// connected just doesn't show up here, no separate expiry/TTL bookkeeping
-// needed. See app.js's export for exactly when this is checked.
+// Reads the locally-remembered room list. checkRecentRooms() (below) does
+// the live presence check, plus this feature's emptyAt-based expiry: a
+// room that's been empty for longer than EMPTY_ROOM_TTL_MS gets deleted
+// and dropped from this list, not just shown as "empty right now" forever.
 function getRecentRooms() {
   try {
     const raw = localStorage.getItem(RECENT_ROOMS_KEY);
@@ -802,8 +804,25 @@ export async function leaveRoom() {
 }
 
 async function enterRoom(id) {
-  roomId = id;
   await init();
+
+  const snap = await get(ref(db, `rooms/${id}`));
+  const room = snap.val();
+  if (!room) {
+    showSetupError("This room no longer exists.");
+    showView("setup");
+    return;
+  }
+
+  const participantCount = Object.keys(room.participants || {}).length;
+  if (participantCount === 0 && room.emptyAt && now() - room.emptyAt > EMPTY_ROOM_TTL_MS) {
+    await remove(ref(db, `rooms/${id}`)).catch(() => {});
+    showSetupError("This room no longer exists.");
+    showView("setup");
+    return;
+  }
+
+  roomId = id;
   await joinAsParticipant(id);
   rememberRoom(id);
   $("recent-rooms").classList.add("hidden");
@@ -909,15 +928,47 @@ export async function checkRecentRooms() {
   if (remembered.length === 0) return;
   await init();
 
-  const results = await Promise.all(remembered.map(async (r) => {
+  // Each outcome is either { remembered, count } for a room still worth
+  // showing, or null for one that's gone (already deleted by another
+  // client, or just deleted here for sitting past its empty-room TTL) —
+  // filtering nulls out below prunes both the displayed list and the
+  // persisted localStorage list in one pass, preserving original order.
+  const outcomes = await Promise.all(remembered.map(async (r) => {
     try {
-      const snap = await get(ref(db, `rooms/${r.roomId}/participants`));
-      const participants = snap.val() || {};
-      return { roomId: r.roomId, count: Object.keys(participants).length };
+      const snap = await get(ref(db, `rooms/${r.roomId}`));
+      const room = snap.val();
+      if (!room) return null;
+
+      const participants = room.participants || {};
+      const count = Object.keys(participants).length;
+
+      if (count === 0) {
+        if (!room.emptyAt) {
+          await set(ref(db, `rooms/${r.roomId}/emptyAt`), now()).catch(() => {});
+        } else if (now() - room.emptyAt > EMPTY_ROOM_TTL_MS) {
+          await remove(ref(db, `rooms/${r.roomId}`)).catch(() => {});
+          return null;
+        }
+      }
+
+      return { remembered: r, count };
     } catch {
-      return { roomId: r.roomId, count: 0 };
+      // Couldn't reach it right now — keep it in the list rather than
+      // dropping a room just because of a transient read failure.
+      return { remembered: r, count: 0 };
     }
   }));
+
+  const kept = outcomes.filter((o) => o !== null);
+  if (kept.length !== remembered.length) {
+    try {
+      localStorage.setItem(RECENT_ROOMS_KEY, JSON.stringify(kept.map((o) => o.remembered)));
+    } catch {
+      // localStorage unavailable — not critical, worst case we re-check next time
+    }
+  }
+
+  const results = kept.map((o) => ({ roomId: o.remembered.roomId, count: o.count }));
 
   const container = $("recent-rooms");
   if (results.length === 0 || roomId) {
@@ -928,11 +979,11 @@ export async function checkRecentRooms() {
     return;
   }
 
-  // A room never truly expires (there's no cleanup/TTL — see
-  // SHARING-DESIGN.md), so show all recently-visited rooms regardless of
-  // current headcount, not just ones with someone in them right now. An
-  // empty one just means nobody's there *at the moment* — the link still
-  // works, and reopening it is exactly how an abandoned room gets revived.
+  // Rooms are shown regardless of current headcount, not just ones with
+  // someone in them right now — an empty one just means nobody's there *at
+  // the moment*, and reopening it is exactly how an abandoned room comes
+  // back to life. They stop appearing once actually deleted above, after
+  // sitting empty for longer than EMPTY_ROOM_TTL_MS.
   container.innerHTML = "";
   const label = document.createElement("p");
   label.className = "post-result-question";
