@@ -45,12 +45,12 @@ Extends `FIREBASE-RULES.json`'s existing `$roomId` block (documented in [SHARING
 
 ```json
 "emptyAt": {
-  ".write": "auth != null && ((newData.val() === null && root.child('rooms').child($roomId).child('participants').exists()) || (newData.isNumber() && !root.child('rooms').child($roomId).child('participants').exists()))",
+  ".write": "auth != null && ((newData.val() === null && root.child('rooms').child($roomId).child('participants').exists()) || (newData.isNumber() && !data.exists() && !root.child('rooms').child($roomId).child('participants').exists()))",
   ".validate": "newData.val() === null || newData.isNumber()"
 }
 ```
 
-Writable to a number only when the room genuinely has zero participants right now (server-verified via the existing `participants` node, not client-asserted) — this stops a client from stamping a fake old `emptyAt` on a room that's actually still active, to force premature deletion. Writable to `null` only when participants currently exist (the join-clears-it case).
+Writable to a number only when the room genuinely has zero participants right now (server-verified via the existing `participants` node, not client-asserted) — this stops a client from stamping a fake old `emptyAt` on a room that's actually still active, to force premature deletion. Writable to `null` only when participants currently exist (the join-clears-it case). The `!data.exists()` guard makes the numeric write **write-once while empty**: once `emptyAt` is stamped, a second client observing the same empty room can't overwrite it with a fresher timestamp, which would otherwise keep pushing the 30-minute deadline back indefinitely.
 
 **Room-level deletion.** `$roomId`'s `.write` is currently hardcoded `false` (SHARING-DESIGN.md: "the *only* write grant in that subtree is" each field's own rule — confirmed during the chat feature's final review). It becomes conditionally allowed for deletion only:
 

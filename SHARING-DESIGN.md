@@ -32,6 +32,7 @@ Firebase **Anonymous Authentication** gives each browser a stable random `uid` o
   extensionsRemaining: number
   votes: { [uid]: optionIndex }   # live, each participant can only write their own key
   allVotedAt: number | null       # set once, host-only, when every current participant has voted
+  emptyAt: number | null          # stamped when the room hits zero participants; cleared on join; deleted 30 min after
   result: { answer, meta }        # meta: "voted" | "tie-break" | "auto-picked" | "overtime"
 
 /rooms/{roomId}/participants/{uid}
@@ -75,7 +76,7 @@ Realtime Database rules can't loop over a dynamic list to verify "genuinely the 
 - **The rule enforces the safe part**: `hostUid` becomes reassignable by *any current participant*, but only when the existing `hostUid` is confirmed absent from `/participants`. This closes the actual security hole (a stranger hijacking a room) without needing to mathematically verify seniority. Verified directly: a non-participant cannot claim host even when the real host is gone, and a genuine participant cannot claim it while the real host is still present.
 - **The client convention decides *who***: every participant's client already has the same live `participants` data (via the existing subscription). The moment a client notices the host is gone, it checks locally whether it holds the earliest `joinedAt` among who's currently present — only that client attempts the write (`maybeClaimAbandonedHost`, wired into both of `subscribe()`'s listeners, so it reacts immediately to a presence change). Since everyone computes from identical synced data, in the honest case exactly one client attempts it and it converges on the oldest remaining participant. If two ever raced, the rule's "must be confirmed absent" guard means only the first write succeeds.
 - **Once transferred, it's transferred** — if the original host reopens a stale tab later, they're just a regular participant now, not automatically reinstated. Simpler semantics, no reconciliation needed. Confirmed: after a transfer, the original host's own client can no longer write host-only fields (`endTime`, etc.).
-- A room can never truly die as long as anyone still has the link: "oldest of who's currently present" holds trivially for a lone (re)joiner, so even a fully abandoned room revives the moment someone opens it again.
+- A room can revive as long as anyone still has the link and reopens it within the empty-room expiry window (see "Recently-active rooms" below): "oldest of who's currently present" holds trivially for a lone (re)joiner, so an abandoned-but-not-yet-expired room revives the moment someone opens it again.
 
 ## Recently-active rooms
 
