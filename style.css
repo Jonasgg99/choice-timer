@@ -453,6 +453,13 @@ body.timeout-flash {
   gap: 8px;
 }
 
+.chat-empty {
+  color: var(--text-dim);
+  font-size: 0.85rem;
+  text-align: center;
+  margin: 8px 0;
+}
+
 .chat-message {
   display: flex;
   flex-direction: column;
@@ -482,6 +489,11 @@ body.timeout-flash {
 .chat-message-own .chat-message-text {
   background: var(--accent);
   color: var(--accent-text);
+}
+
+#chat-error {
+  padding: 0 14px;
+  margin: 8px 0 0;
 }
 
 .chat-form {

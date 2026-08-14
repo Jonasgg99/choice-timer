@@ -141,8 +141,9 @@
     </button>
     <div id="chat-body" class="chat-body">
       <div id="chat-messages" class="chat-messages"></div>
+      <p id="chat-error" class="error hidden"></p>
       <form id="chat-form" class="chat-form">
-        <input type="text" id="chat-input" class="chat-input" placeholder="Message the room&hellip;" maxlength="280" autocomplete="off">
+        <input type="text" id="chat-input" class="chat-input" placeholder="Message the room&hellip;" maxlength="280" autocomplete="off" aria-label="Message the room">
         <button type="submit" class="chat-send-btn">Send</button>
       </form>
     </div>

@@ -653,6 +653,7 @@ function renderChatCollapseState() {
     const latestTs = Object.values(latestMessages).reduce((max, m) => Math.max(max, m.ts || 0), 0);
     lastSeenMessageTs = Math.max(lastSeenMessageTs, latestTs);
     $("chat-unread-dot").classList.add("hidden");
+    scrollChatToBottom();
   }
 }
 
@@ -661,11 +662,26 @@ function setChatCollapsed(collapsed) {
   renderChatCollapseState();
 }
 
+// #chat-messages has display:none while the panel is collapsed (via the
+// shared .hidden class on #chat-body), so scrollHeight reads 0 and this is a
+// no-op then — that's fine, renderChatCollapseState() re-calls this once the
+// panel actually becomes visible.
+function scrollChatToBottom() {
+  const container = $("chat-messages");
+  container.scrollTop = container.scrollHeight;
+}
+
 function renderChatMessages() {
   const container = $("chat-messages");
   const entries = Object.values(latestMessages).sort((a, b) => a.ts - b.ts);
 
   container.innerHTML = "";
+  if (entries.length === 0) {
+    const empty = document.createElement("p");
+    empty.className = "chat-empty";
+    empty.textContent = "No messages yet.";
+    container.appendChild(empty);
+  }
   entries.forEach((m) => {
     const row = document.createElement("div");
     row.className = m.uid === uid ? "chat-message chat-message-own" : "chat-message";
@@ -682,7 +698,7 @@ function renderChatMessages() {
     row.appendChild(text);
     container.appendChild(row);
   });
-  container.scrollTop = container.scrollHeight;
+  scrollChatToBottom();
 
   const latestTs = entries.length ? entries[entries.length - 1].ts : 0;
   if (chatCollapsed && latestTs > lastSeenMessageTs) {
@@ -762,6 +778,9 @@ export async function leaveRoom() {
   $("chat-messages").innerHTML = "";
   $("chat-input").value = "";
   $("chat-unread-dot").classList.add("hidden");
+  $("chat-error").classList.add("hidden");
+  $("chat-body").classList.remove("hidden");
+  $("chat-toggle").setAttribute("aria-expanded", "true");
 
   history.replaceState(null, "", location.pathname + location.search);
 }
@@ -790,8 +809,14 @@ async function enterRoom(id) {
   $("chat-form").onsubmit = (e) => {
     e.preventDefault();
     const input = $("chat-input");
-    sendChatMessage(input.value);
+    const text = input.value;
     input.value = "";
+    $("chat-error").classList.add("hidden");
+    sendChatMessage(text).catch(() => {
+      input.value = text;
+      $("chat-error").textContent = "Message didn't send — try again.";
+      $("chat-error").classList.remove("hidden");
+    });
   };
   $("chat-toggle").onclick = () => setChatCollapsed(!chatCollapsed);
 }
