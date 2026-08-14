@@ -26,11 +26,12 @@ One new field on the existing room object (data model documented in [SHARING-DES
 
 ## Detection: stamping `emptyAt`
 
-Three trigger points, all performing the same check ("the room currently has zero participants, and `emptyAt` isn't already set — write `emptyAt = now()`"):
+Two trigger points, both performing the same check ("the room currently has zero participants, and `emptyAt` isn't already set — write `emptyAt = now()`"):
 
-1. **The existing live `participants` listener** in `subscribe()` — whenever it fires and the result is empty, stamp `emptyAt` if not already set. Covers a room going empty while another client (e.g. the host's own tab, mid-session) is still subscribed and watching.
-2. **Explicitly inside `leaveRoom()`**, checked before removing the leaving client's own participant entry: if they're the only participant present, stamp `emptyAt` as part of leaving. This is needed because `leaveRoom()` also unsubscribes that same client's participants listener as part of leaving — so trigger 1 alone could miss the exact moment a lone participant leaves, since nothing else is watching by the time the removal completes.
-3. **`checkRecentRooms()`'s one-time `get()`** on each remembered room (see "Deletion triggers" below) — a one-off snapshot, not a live subscription, so it's a separate trigger from 1 above, not a duplicate of it.
+1. **Explicitly inside `leaveRoom()`**, checked before removing the leaving client's own participant entry: if they're the only participant present, stamp `emptyAt` right after removing that entry (the security rule requires participants to already be empty at write time, so the stamp has to come after the removal, not before). This covers the common case of someone explicitly leaving a room they're alone in.
+2. **`checkRecentRooms()`'s one-time `get()`** on each remembered room (see "Deletion triggers" below) — this is also what catches a room that went empty *without* anyone explicitly leaving (e.g. the last tab just closing, relying on presence's `onDisconnect` cleanup with nobody watching live). The next time any client checks its recently-active rooms, it observes the room is empty with no `emptyAt` set yet, and stamps it then.
+
+There is deliberately no live-listener-based trigger: in this codebase, being subscribed to a room's `participants` node always means you are yourself one of the participants (you join before subscribing, and unsubscribe before removing your own entry on leaving), so a client's own live listener can never observe a genuinely empty result while it's still watching — a third trigger point there would be unreachable dead code.
 
 `emptyAt` is cleared back to `null` in `joinAsParticipant()` whenever someone joins — so if a room fills back up before the 30-minute window elapses, the clock resets rather than reusing a stale timestamp from a previous empty period.
 
@@ -65,7 +66,7 @@ Writable to a number only when the room genuinely has zero participants right no
 
 ## Deletion triggers (client code)
 
-- **`checkRecentRooms()`** (setup screen's "rejoin a room" list): already fetches each remembered room's participant count via `get()`. This is itself a third detection trigger — a one-time snapshot, not a live subscription, so it doesn't go through the `participants` listener in trigger 1 above. Also fetch `emptyAt` in the same call:
+- **`checkRecentRooms()`** (setup screen's "rejoin a room" list): already fetches each remembered room's participant count via `get()`. This is itself detection trigger 2 above. Also fetch `emptyAt` in the same call:
   - If the room is empty and `emptyAt` isn't set yet, stamp it now (this visit is the first observation).
   - If the room is empty and `now() - emptyAt > 1800000`, attempt to delete it (best-effort — ignore failure, e.g. a race with another client) and drop it from the local `localStorage` remembered-rooms list immediately, rather than waiting for the next visit to notice it's gone.
 - **Joining a room** (`enterRoom()`/`joinRoomFromHash()`): before completing the join, if the target room is found to be empty and past the threshold, delete it and surface the new "This room no longer exists" message (see below) instead of joining a room that's about to disappear.
@@ -95,7 +96,7 @@ The four rooms already empty in the live database today have no `emptyAt` set ye
 
 Following the project's existing two-participant testing pattern and fast-forward technique (per `CLAUDE.md`: writing `endTime`/`allVotedAt` directly via the SDK rather than waiting out real timers — the same approach applies to `emptyAt` here):
 
-1. Two participants join a room; both leave (one via explicit "leave", triggering the `leaveRoom()` path; verify the other case by having the last-remaining participant leave while a separate observer client's `participants` listener is still subscribed) — confirm `emptyAt` gets stamped in both scenarios.
+1. Two participants join a room; both leave via explicit "leave" — confirm `emptyAt` gets stamped when the last one goes, via the `leaveRoom()` path. Separately, simulate an abrupt disconnect (remove a lone participant's entry directly via the SDK, bypassing `leaveRoom()`) and confirm `emptyAt` is NOT stamped immediately (nothing is watching live) but IS stamped the next time `checkRecentRooms()` observes that room.
 2. Fast-forward `emptyAt` via the SDK to simulate 30+ minutes elapsed; confirm `checkRecentRooms()` deletes the room and removes it from the local recently-active list.
 3. Attempt to write a spoofed old `emptyAt` onto a room that currently has participants — rejected by the rules.
 4. Attempt to delete a room that has participants, or one that's empty but hasn't hit the 30-minute threshold yet — rejected by the rules.
