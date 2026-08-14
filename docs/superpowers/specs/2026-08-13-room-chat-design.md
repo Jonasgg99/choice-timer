@@ -24,7 +24,7 @@ Extends the existing room data model documented in [SHARING-DESIGN.md](../../../
 
 Chat is **room-scoped, not question-scoped**: it persists across the whole room's lifetime, including when the host posts a new question (unlike `question`/`options`/`votes`/`result`, which get overwritten each round). It is visible in every room state — waiting, countdown, and result — including on the host's own screen while they're composing the next question.
 
-Client reads with a `limitToLast(200)`-style query rather than the unbounded list, as a cheap safety valve against one degenerate case (a room left open for days with constant chatter). No server-side pruning/deletion job — consistent with the project's existing stance of not building room cleanup/TTL until it's an actual problem (see SHARING-DESIGN.md's "Known simplifications").
+Client reads with a `limitToLast(200)`-style query rather than the unbounded list, which bounds what the chat panel holds in memory and renders, as a cheap safety valve against one degenerate case (a room left open for days with constant chatter). This caps rendering, not transfer: `room.js`'s existing whole-room listener (`onValue(ref(db, \`rooms/${id}\`), ...)`, used for `question`/`state`/`votes`/etc.) already reads the entire room node, including the full `messages` subtree, so a long-lived chatty room still downloads its complete message history regardless of the chat listener's own cap. No server-side pruning/deletion job — consistent with the project's existing stance of not building room cleanup/TTL until it's an actual problem (see SHARING-DESIGN.md's "Known simplifications").
 
 ## Security rules
 
