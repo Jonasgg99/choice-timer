@@ -219,6 +219,12 @@ async function joinAsParticipant(id) {
   const myRef = ref(db, `rooms/${id}/participants/${uid}`);
   await set(myRef, { handle: myHandle, joinedAt: now() });
   onDisconnect(myRef).remove();
+  // Now that we've joined, the room is no longer empty — clear any prior
+  // emptyAt stamp so a later empty period starts its own fresh TTL window
+  // instead of reusing a stale timestamp. Best-effort: if this fails, the
+  // room stays fully protected from deletion anyway, since the deletion
+  // rule independently requires participants to be empty at delete time.
+  await set(ref(db, `rooms/${id}/emptyAt`), null).catch(() => {});
 }
 
 async function postQuestionToRoom(form) {
@@ -738,6 +744,8 @@ function subscribe(id) {
 export async function leaveRoom() {
   if (!roomId) return;
 
+  const wasLastParticipant = Object.keys(latestParticipants || {}).length === 1;
+
   if (unsubscribeRoom) unsubscribeRoom();
   if (unsubscribeParticipants) unsubscribeParticipants();
   if (unsubscribeMessages) unsubscribeMessages();
@@ -754,8 +762,16 @@ export async function leaveRoom() {
   try {
     onDisconnect(myRef).cancel();
     await remove(myRef);
+    // Now that our own presence entry is actually gone, the room may be
+    // genuinely empty — stamp emptyAt so it becomes eligible for deletion.
+    // Must happen AFTER remove(), not before: the security rule only
+    // allows this write once participants is actually empty server-side.
+    if (wasLastParticipant) {
+      await set(ref(db, `rooms/${roomId}/emptyAt`), now());
+    }
   } catch {
-    // best-effort — presence will still self-clean via onDisconnect if this fails
+    // best-effort — presence will still self-clean via onDisconnect if this fails,
+    // and any client that later observes the empty room will stamp emptyAt then
   }
 
   roomId = null;
