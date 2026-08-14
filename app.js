@@ -34,6 +34,9 @@
     optionsContainer: $('options-container'),
     extendBtn: $('extend-btn'),
     countdownShareBtn: $('countdown-share-btn'),
+    randomPickBtn: $('random-pick-btn'),
+    randomPickIcon: $('random-pick-icon'),
+    randomPickLabel: $('random-pick-label'),
 
     // result
     viewResult: $('view-result'),
@@ -216,9 +219,29 @@
     els.extendInfo.classList.add('hidden');
     document.body.classList.remove('timeout-flash');
     stopBeeping();
+
+    const isCoin = state.options.length === 2;
+    els.randomPickIcon.textContent = isCoin ? '🪙' : '🎲';
+    els.randomPickIcon.classList.remove('spinning');
+    els.randomPickLabel.textContent = isCoin ? 'Toss a coin' : 'Roll the dice';
+    els.randomPickBtn.disabled = false;
+    els.randomPickBtn.classList.remove('hidden');
+
     showView('countdown');
     tick();
   }
+
+  const RANDOM_PICK_SPIN_MS = 700;
+
+  els.randomPickBtn.addEventListener('click', () => {
+    els.randomPickBtn.disabled = true;
+    els.randomPickIcon.classList.add('spinning');
+    const meta = state.options.length === 2 ? 'coin-flip' : 'dice-roll';
+    setTimeout(() => {
+      const pick = state.options[Math.floor(Math.random() * state.options.length)];
+      finish(pick, meta);
+    }, RANDOM_PICK_SPIN_MS);
+  });
 
   function formatTime(ms) {
     const totalSeconds = Math.max(0, Math.ceil(ms / 1000));
@@ -304,6 +327,8 @@
     tapped: 'Good enough — go with it.',
     overtime: "Time ran out, but you still made the call.",
     'auto-picked': "No time left to overthink it — this one's it.",
+    'coin-flip': 'Flipped a coin — that’s the call.',
+    'dice-roll': 'Rolled the dice — that’s the call.',
   };
 
   const REVEAL_DELAY_MS = 450;

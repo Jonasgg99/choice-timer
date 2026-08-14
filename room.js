@@ -36,6 +36,7 @@ let lastSeenMessageTs = 0;
 
 const ROOM_CODE_CHARS = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"; // no ambiguous chars
 const GRACE_PERIOD_MS = 5000;
+const RANDOM_PICK_SPIN_MS = 700;
 const RECENT_ROOMS_KEY = "choiceTimerRecentRooms";
 const MAX_RECENT_ROOMS = 5;
 const EMPTY_ROOM_TTL_MS = 30 * 60 * 1000; // 30 minutes
@@ -255,6 +256,22 @@ async function extendRoom() {
     endTime: now() + room.extensionMs,
     state: "countdown",
     allVotedAt: null,
+  });
+}
+
+// Host-only: immediately resolve the round with a random pick, instead of
+// waiting for votes or the timer. The spin animation is purely local (the
+// host's own click handler delays this call until it finishes) — other
+// participants just see the room jump to "result" once it lands, same as
+// any other resolution.
+async function randomPick() {
+  if (!latestRoom || !isHost()) return;
+  const options = latestRoom.options;
+  const pick = options[Math.floor(Math.random() * options.length)];
+  const meta = options.length === 2 ? "coin-flip" : "dice-roll";
+  await update(ref(db, `rooms/${roomId}`), {
+    state: "result",
+    result: { answer: pick, meta },
   });
 }
 
@@ -500,6 +517,8 @@ const resultMetaText = {
   "tie-break": "It was a tie — settled at random.",
   "auto-picked": "Nobody voted in time — picked at random.",
   overtime: "Time ran out, but a vote came in.",
+  "coin-flip": "The host flipped a coin — that's the call.",
+  "dice-roll": "The host rolled the dice — that's the call.",
 };
 
 const REVEAL_DELAY_MS = 450;
@@ -546,6 +565,18 @@ function renderRoom() {
     const timerDisplay = $("timer-display");
     const extendBtn = $("extend-btn");
     const extendInfo = $("extend-info");
+    const randomPickBtn = $("random-pick-btn");
+
+    if (iAmHost) {
+      const isCoin = room.options.length === 2;
+      $("random-pick-icon").textContent = isCoin ? "🪙" : "🎲";
+      $("random-pick-icon").classList.remove("spinning");
+      $("random-pick-label").textContent = isCoin ? "Toss a coin" : "Roll the dice";
+      randomPickBtn.disabled = false;
+      randomPickBtn.classList.remove("hidden");
+    } else {
+      randomPickBtn.classList.add("hidden");
+    }
 
     if (room.state === "timeout_waiting") {
       timerDisplay.textContent = "0";
@@ -838,6 +869,11 @@ async function enterRoom(id) {
   subscribe(id);
 
   $("extend-btn").onclick = () => extendRoom();
+  $("random-pick-btn").onclick = () => {
+    $("random-pick-btn").disabled = true;
+    $("random-pick-icon").classList.add("spinning");
+    setTimeout(randomPick, RANDOM_PICK_SPIN_MS);
+  };
   $("new-question-btn").onclick = () => requestNewQuestion();
   $("invite-more-btn").onclick = () => shareCurrentRoomLink();
   $("ask-group-btn").onclick = async () => {

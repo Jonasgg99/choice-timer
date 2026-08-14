@@ -289,6 +289,27 @@ body.timeout-flash {
   margin-top: 12px;
 }
 
+#random-pick-btn {
+  display: block;
+  width: 100%;
+  max-width: 420px;
+  margin: 12px auto 0;
+}
+
+.random-pick-icon {
+  display: inline-block;
+}
+
+.random-pick-icon.spinning {
+  animation: random-pick-spin 0.7s ease-out;
+}
+
+@keyframes random-pick-spin {
+  from { transform: rotate(0deg) scale(1); }
+  50% { transform: rotate(720deg) scale(1.3); }
+  to { transform: rotate(1440deg) scale(1); }
+}
+
 .option-btn {
   padding: 16px;
   border-radius: var(--radius);
