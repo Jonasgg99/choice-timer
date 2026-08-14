@@ -3,7 +3,7 @@
     "rooms": {
       "$roomId": {
         ".read": "auth != null",
-        ".write": false,
+        ".write": "auth != null && newData.val() === null && !data.child('participants').exists() && data.child('emptyAt').exists() && (now - data.child('emptyAt').val()) > 1800000",
 
         "hostUid": {
           ".write": "auth != null && (!data.exists() || data.val() === auth.uid || (!root.child('rooms').child($roomId).child('participants').child(data.val()).exists() && root.child('rooms').child($roomId).child('participants').child(auth.uid).exists()))",
@@ -36,6 +36,10 @@
         "autoPick": {
           ".write": "auth != null && auth.uid === root.child('rooms').child($roomId).child('hostUid').val()",
           ".validate": "newData.isBoolean()"
+        },
+        "emptyAt": {
+          ".write": "auth != null && ((newData.val() === null && root.child('rooms').child($roomId).child('participants').exists()) || (newData.isNumber() && !data.exists() && !root.child('rooms').child($roomId).child('participants').exists()))",
+          ".validate": "newData.val() === null || newData.isNumber()"
         },
 
         "state": {
