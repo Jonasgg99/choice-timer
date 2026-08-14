@@ -761,6 +761,7 @@ export async function leaveRoom() {
   $("chat-panel").classList.add("hidden");
   $("chat-messages").innerHTML = "";
   $("chat-input").value = "";
+  $("chat-unread-dot").classList.add("hidden");
 
   history.replaceState(null, "", location.pathname + location.search);
 }
