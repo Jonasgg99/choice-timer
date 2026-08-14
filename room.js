@@ -811,15 +811,24 @@ async function enterRoom(id) {
   if (!room) {
     showSetupError("This room no longer exists.");
     showView("setup");
+    history.replaceState(null, "", location.pathname + location.search);
     return;
   }
 
   const participantCount = Object.keys(room.participants || {}).length;
   if (participantCount === 0 && room.emptyAt && now() - room.emptyAt > EMPTY_ROOM_TTL_MS) {
-    await remove(ref(db, `rooms/${id}`)).catch(() => {});
-    showSetupError("This room no longer exists.");
-    showView("setup");
-    return;
+    try {
+      await remove(ref(db, `rooms/${id}`));
+      showSetupError("This room no longer exists.");
+      showView("setup");
+      history.replaceState(null, "", location.pathname + location.search);
+      return;
+    } catch {
+      // Delete was rejected — the security rule re-checks emptiness at
+      // delete time, so someone joined between our read and this attempt.
+      // The room is genuinely not empty/expired after all; fall through and
+      // join it normally instead of showing a false "no longer exists" error.
+    }
   }
 
   roomId = id;
@@ -946,8 +955,16 @@ export async function checkRecentRooms() {
         if (!room.emptyAt) {
           await set(ref(db, `rooms/${r.roomId}/emptyAt`), now()).catch(() => {});
         } else if (now() - room.emptyAt > EMPTY_ROOM_TTL_MS) {
-          await remove(ref(db, `rooms/${r.roomId}`)).catch(() => {});
-          return null;
+          try {
+            await remove(ref(db, `rooms/${r.roomId}`));
+            return null;
+          } catch {
+            // Delete was rejected — the security rule re-checks emptiness at
+            // delete time, so someone joined between our read and this
+            // attempt. The room isn't actually gone; keep it in the list
+            // rather than silently dropping a now-occupied room.
+            return { remembered: r, count: 0 };
+          }
         }
       }
 
