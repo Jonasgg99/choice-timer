@@ -115,6 +115,9 @@
     els.viewWaiting.classList.toggle('hidden', name !== 'waiting');
     els.viewCountdown.classList.toggle('hidden', name !== 'countdown');
     els.viewResult.classList.toggle('hidden', name !== 'result');
+    // Every return to setup (a stale room link falling back, "Start over",
+    // leaving a room) should refocus the question field, not just first load.
+    if (name === 'setup') els.question.focus();
   }
 
   // ---------- setup view ----------
