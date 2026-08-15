@@ -454,6 +454,14 @@
     'Should I go to the gym today?',
     'Which apartment should I pick?',
     'Should I say yes to this?',
+    'Should I book the trip?',
+    'What should I binge next?',
+    'Should I DM them first?',
+    'What should I wear tonight?',
+    'Should I finally clean my room?',
+    'Should I cancel this subscription?',
+    'Should I get a haircut?',
+    'Which one should I buy?',
   ];
 
   let placeholderIndex = 0;
