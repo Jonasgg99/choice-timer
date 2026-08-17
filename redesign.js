@@ -73,6 +73,73 @@
   chipify($('max-extensions'), { compact: true });
   chipify($('extension-length'), { compact: true, label: (o) => o.textContent.replace(' seconds', 's').replace('+1 minute', '+1m') });
 
+  /* --------------------------------------------------- speak your question
+     Only created when the API exists — nothing to hide otherwise. #question
+     stays the source of truth: the mic just writes into it and dispatches
+     the input event, same as typing would.                                */
+  const SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition;
+  const question = $('question');
+
+  if (SpeechRec && question) {
+    const wrap = document.createElement('div');
+    wrap.className = 'ct-question-wrap';
+    question.replaceWith(wrap);
+    wrap.appendChild(question);
+    question.classList.add('has-mic');
+
+    const micBtn = document.createElement('button');
+    micBtn.type = 'button';
+    micBtn.className = 'ct-mic-btn';
+    micBtn.setAttribute('aria-label', 'Speak your question');
+    const micIcon = document.createElement('span');
+    micIcon.className = 'ct-mic-icon';
+    micBtn.appendChild(micIcon);
+    wrap.appendChild(micBtn);
+
+    let recognition = null;
+    let listening = false;
+
+    function setListening(next) {
+      listening = next;
+      micBtn.classList.toggle('listening', next);
+    }
+
+    micBtn.addEventListener('click', () => {
+      if (listening) {
+        recognition?.stop();
+        return;
+      }
+
+      recognition = new SpeechRec();
+      recognition.lang = navigator.language || 'en-US';
+      recognition.interimResults = false;
+      recognition.maxAlternatives = 1;
+
+      recognition.onresult = (e) => {
+        question.value = e.results[0][0].transcript;
+        question.dispatchEvent(new Event('input', { bubbles: true }));
+        question.focus();
+      };
+      recognition.onerror = (e) => {
+        if (e.error === 'aborted') return;
+        const err = $('setup-error');
+        if (err) {
+          err.textContent = "Couldn't hear that — try typing it.";
+          err.classList.remove('hidden');
+        }
+      };
+      recognition.onend = () => setListening(false);
+
+      $('setup-error')?.classList.add('hidden');
+      setListening(true);
+      try {
+        recognition.start();
+      } catch {
+        setListening(false);
+      }
+    });
+  }
+
   /* ------------------------------------------- advanced summary + a11y */
   const advToggle = $('advanced-toggle');
   const advPanel = $('advanced-panel');

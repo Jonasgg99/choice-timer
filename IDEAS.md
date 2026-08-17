@@ -29,6 +29,9 @@ Rooms that sit empty (no current participants) for more than 30 minutes now get 
 ### "Toss a coin" / "Roll the dice" as an alternative resolution
 A button on the countdown screen — "🪙 Toss a coin" for Yes/No questions, "🎲 Roll the dice" for anything with more options — that immediately resolves the round with a random pick, instead of waiting out the timer or tapping an option. A brief spin animation on the icon (0.7s) stands in for an instant reveal, leaning into the [Levitt coin-flip research](RESEARCH.md#levitts-coin-flip-experiment) already grounding this app's premise. Works in both solo mode and group rooms; in a room it's host-only (mirrors the existing extend-timer control) and writes the result directly via the room's existing host-write permission — no Firebase rules changes needed. Result copy calls out how it was decided ("Flipped a coin — that's the call." / solo; "The host flipped a coin — that's the call." / group).
 
+### Speak your question (voice input)
+A mic button next to the setup screen's question field, using the browser's native `SpeechRecognition`/`webkitSpeechRecognition` API — no library, no server. From the 2026-08-18 solo-experience brainstorm; see [the design doc](docs/superpowers/specs/2026-08-18-voice-input-design.md) for the full reasoning. Implemented entirely in `redesign.js` following that file's existing wrap-and-inject pattern (the native `#question` input stays the source of truth) — feature-detected, so the button simply never appears where the API is unsupported (Firefox, Safari/iOS), rather than showing a disabled/dead control. Single-utterance recognition only: the transcript fills the field and focus returns to it for review/editing, it never auto-starts the countdown. A `.listening` state pulses in accent color (not red — red stays reserved for real errors), and permission-denied/no-speech errors surface as a one-line message reusing the existing `#setup-error` element rather than failing silently. The mic icon itself is CSS-drawn (a bordered capsule + stem), matching the coin/dice glyph treatment, to stay zero-asset and theme-adaptive.
+
 ### "Paper & Ink" visual redesign
 A full UI overhaul (light/dark theme via `prefers-color-scheme` or an injected toggle, chip-based controls, a countdown ring, a promoted resolution-method pill on the result screen, sequenced post-result prompts, group vote tallies shown as a peripheral fill, a docked mobile chat sheet) delivered as a drop-in `style.css` replacement plus a new additive `redesign.js` — see [CLAUDE.md](CLAUDE.md)'s file map for how it layers onto `app.js`/`room.js`/`followup.js` without renaming or rebinding anything those scripts touch. Loaded last in `index.html`; if it fails, the app still works with plain selects and a bare timer number. The random-pick button's 🪙/🎲 emoji were later swapped for drawn circle/dice-pip glyphs (`is-coin`/`is-dice` classes in `app.js`/`room.js`, shapes in `style.css`), and the satisfaction-check emoji ("🙂 Yeah" / "🙁 Not really") were dropped to plain text for the same reason — color emoji clash with the redesign's monochrome, theme-adaptive (`currentColor`) visual language. Also added: answering "Not really" now offers a "Try again" button that re-runs the same question with a fresh countdown (same duration/extension budget) via `window.__choiceTimer.retryCountdown()`, instead of only surfacing a note for next time.
 
@@ -77,6 +80,34 @@ Small link/button to a tip or donation page (Ko-fi, Buy Me a Coffee, GitHub Spon
 
 ### 14. Consider renaming the project/repo to "Laterbase" (decision only — rename itself is quick)
 Naming idea floated: "Laterbase" as a possible new name (a pun on Firebase, now that the app has one, plus "deciding things later"). Not acted on — just logged for a deliberate decision at some point. GitHub's repo transfer/rename keeps full history and auto-redirects old links, so there's no real cost to doing this whenever it's decided (see earlier discussion on repo transfers in this project).
+
+### From the 2026-08-18 solo-experience brainstorm
+
+Themes requested: better decisions/follow-through, less friction to start, more delight/personality — explicitly *not* return-visit/streak mechanics. "Speak your question" (voice input) was picked from this batch to build immediately — see the Shipped section below and [its design doc](docs/superpowers/specs/2026-08-18-voice-input-design.md). #19 and #20 below are queued as next up after that. #15 (gut-check) is being prototyped on a branch, without the full spec/plan treatment.
+
+### 15. Gut-check before the timer starts (S)
+A private, skippable, never-persisted "which way are you leaning?" tap right after setup, before the countdown is visible — same option buttons, no visible record. The result screen's satisfaction copy then branches on whether the actual outcome matched that private lean (see the expanded write-up in this session's conversation, or ask to have it re-summarized). Directly operationalizes the actual mechanism [Levitt's research](RESEARCH.md#levitts-coin-flip-experiment) measures — reaction to an assigned outcome reveals a pre-existing preference — rather than just the coin-flip mechanic. Trade-off: adds one tap before the countdown starts, so needs to stay genuinely optional/near-zero-cost to skip.
+
+### 16. Reminder notification for the follow-through time (S-M)
+When "Today" or "Custom" is picked in the existing follow-through prompt, offer a same-session browser `Notification` at that time (Notification API, permission-gated, no backend). A more active version of [implementation intentions](RESEARCH.md#implementation-intentions) than the current static `.ics`/Google Calendar links — closes the loop instead of just handing off a file.
+
+### 17. Share-to-decide via Web Share Target (S)
+Pairs with the already-listed PWA manifest idea (#12) — once it's a PWA, register as a Web Share Target so selecting text anywhere on a phone and hitting Share drops it straight in as the question, instead of retyping it.
+
+### 18. One-tap flip, no timer (XS-S)
+A literal instant coin/dice shortcut on the setup screen itself, bypassing the countdown entirely for when even a short wait feels like too much — the purest form of the Levitt mechanic, distinct from the existing in-countdown "Toss a coin" button.
+
+### 19. Coin visibly lands on the answer (S) — queued next
+The coin-flip spin animation is currently abstract (rotate + scale). For a Yes/No coin flip specifically, it could visibly land showing the face that matches the real result, tying the flourish to the actual outcome instead of just being decorative.
+
+### 20. More personality in the satisfaction-ack copy (XS) — queued next
+The result meta line already varies by resolution type (tapped/timed-out/auto-picked/coin-flip/dice-roll); extend that same variation into the "Good — go with it" / "Not really" acknowledgment lines in `followup.js` for a bit more character, staying within the app's existing dry/restrained voice.
+
+### 21. "What others decided" — anonymized feed or social-proof section (M, needs scoping)
+A section showing what other people have decided on similar questions — data source (real aggregated/anonymized usage data vs. seeded/synthetic) deliberately left open to decide later. Flagged: this leans directly against the "no return-visit hooks" boundary set for this brainstorm — worth being deliberate about whether/how that tension gets resolved before designing it.
+
+### 22. Commitment-focused variant of #21 (note only, not yet scoped)
+Logged so it isn't lost, not yet developed: a similar social-proof mechanic aimed at commitment/follow-through rather than the decision itself — e.g. surfacing whether other people who made a similar choice actually followed through, rather than surfacing what they chose. Needs its own brainstorm before design.
 
 ### Superseded
 - ~~Shareable result as copyable text~~ — folded into the shipped shareable-links feature above; a real share link is a strictly better version of this.
