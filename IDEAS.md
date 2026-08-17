@@ -29,6 +29,9 @@ Rooms that sit empty (no current participants) for more than 30 minutes now get 
 ### "Toss a coin" / "Roll the dice" as an alternative resolution
 A button on the countdown screen — "🪙 Toss a coin" for Yes/No questions, "🎲 Roll the dice" for anything with more options — that immediately resolves the round with a random pick, instead of waiting out the timer or tapping an option. A brief spin animation on the icon (0.7s) stands in for an instant reveal, leaning into the [Levitt coin-flip research](RESEARCH.md#levitts-coin-flip-experiment) already grounding this app's premise. Works in both solo mode and group rooms; in a room it's host-only (mirrors the existing extend-timer control) and writes the result directly via the room's existing host-write permission — no Firebase rules changes needed. Result copy calls out how it was decided ("Flipped a coin — that's the call." / solo; "The host flipped a coin — that's the call." / group).
 
+### "Paper & Ink" visual redesign
+A full UI overhaul (light/dark theme via `prefers-color-scheme` or an injected toggle, chip-based controls, a countdown ring, a promoted resolution-method pill on the result screen, sequenced post-result prompts, group vote tallies shown as a peripheral fill, a docked mobile chat sheet) delivered as a drop-in `style.css` replacement plus a new additive `redesign.js` — see [CLAUDE.md](CLAUDE.md)'s file map for how it layers onto `app.js`/`room.js`/`followup.js` without renaming or rebinding anything those scripts touch. Loaded last in `index.html`; if it fails, the app still works with plain selects and a bare timer number. Left undone: swapping the 🪙/🎲 emoji on the random-pick button for a drawn glyph (one line in `app.js`, cosmetic).
+
 ## Ideas
 
 Ordered by priority (highest first) — my judgment call, balancing effort, how directly research-backed the idea is, and how much it extends the app's core value. Rough effort tags: XS (~minutes), S (~an hour), M (a session), L (multi-session).
@@ -72,10 +75,7 @@ Worth doing once the app's feature set feels more settled — installability mat
 ### 13. "Support the creator" button (XS)
 Small link/button to a tip or donation page (Ko-fi, Buy Me a Coffee, GitHub Sponsors, etc.). Purely cosmetic/optional, needs a platform picked before building.
 
-### 14. UI overhaul (L)
-General visual design pass — the app is functional but plain. Open-ended enough that it needs its own scoping/direction session before starting, rather than being picked up as a quick task.
-
-### 15. Consider renaming the project/repo to "Laterbase" (decision only — rename itself is quick)
+### 14. Consider renaming the project/repo to "Laterbase" (decision only — rename itself is quick)
 Naming idea floated: "Laterbase" as a possible new name (a pun on Firebase, now that the app has one, plus "deciding things later"). Not acted on — just logged for a deliberate decision at some point. GitHub's repo transfer/rename keeps full history and auto-redirects old links, so there's no real cost to doing this whenever it's decided (see earlier discussion on repo transfers in this project).
 
 ### Superseded

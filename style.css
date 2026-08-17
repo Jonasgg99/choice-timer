@@ -1,29 +1,152 @@
+/* ==========================================================================
+   Choice Timer — "Paper & Ink"
+   Drop-in replacement for style.css. Every selector the existing app.js /
+   room.js / followup.js touch is preserved; nothing here renames a hook.
+   Light default, dark via prefers-color-scheme or [data-theme] on <html>.
+   ========================================================================== */
+
 :root {
-  --bg: #12131a;
-  --surface: #1c1e29;
-  --surface-2: #262939;
-  --text: #eef0f6;
-  --text-dim: #9498ab;
-  --accent: #5b8cff;
+  /* --- Neutrals: true-neutral, chroma ~0.004 -------------------------- */
+  --bg: #f6f6f7;
+  --surface: #ffffff;
+  --surface-2: #eeeef0;
+  --surface-3: #f6f6f7;
+  --text: #17171a;
+  --text-dim: #6c6c76;
+  --text-faint: #9a9aa4;
+  --border: #e3e3e7;
+  --border-strong: #cfcfd6;
+
+  /* --- Accent + states ------------------------------------------------ */
+  --accent: #6d45c9;
+  --accent-strong: #5a35b4;
+  --accent-weak: #f2ecfd;
   --accent-text: #ffffff;
-  --danger: #ff3b3b;
-  --danger-dim: #3a1414;
-  --border: #333650;
-  --radius: 14px;
+
+  --warn: #b0730a;             /* 40% remaining */
+  --warn-ink: #8a5a07;
+  --warn-tint: #fdf6e9;
+  --warn-track: #eadfc8;
+
+  --go: #1c8459;               /* last 5s — "now", not "error" */
+  --go-ink: #156946;
+  --go-tint: #eff7f2;
+  --go-track: #dbe9e2;
+  --go-border: #d3e5da;
+
+  --danger: #cb3a2c;           /* reserved for real errors only */
+  --danger-weak: #fbf1f0;
+
+  /* --- Type ------------------------------------------------------------ */
+  --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --serif: Georgia, "Times New Roman", Times, serif;
+  --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+
+  /* --- Shape + depth --------------------------------------------------- */
+  --r-control: 10px;
+  --r-card: 16px;
+  --r-pill: 999px;
+  --shadow-1: 0 1px 2px rgba(0, 0, 0, .04);
+  --shadow-2: 0 2px 8px rgba(109, 69, 201, .28);
+  --shadow-sheet: 0 -8px 24px rgba(0, 0, 0, .10);
+
+  color-scheme: light;
 }
 
+:root[data-theme="dark"] { color-scheme: dark; }
+
+/* Dark theme: same ramp, inverted. Applied by OS preference unless the user
+   has explicitly chosen light, and by [data-theme="dark"] regardless. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) { color-scheme: dark; }
+  :root:not([data-theme="light"]) {
+    --bg: #131316;
+    --surface: #1c1c21;
+    --surface-2: #26262d;
+    --surface-3: #1c1c21;
+    --text: #f2f2f4;
+    --text-dim: #9a9aa6;
+    --text-faint: #7c7c88;
+    --border: #34343e;
+    --border-strong: #45454f;
+    --accent: #a184f2;
+    --accent-strong: #b8a1f7;
+    --accent-weak: #241d3a;
+    --accent-text: #17171a;
+    --warn: #e0a33a;
+    --warn-ink: #f0bd63;
+    --warn-tint: #241d10;
+    --warn-track: #3d3320;
+    --go: #3fbd85;
+    --go-ink: #61d3a0;
+    --go-tint: #10231a;
+    --go-track: #20402f;
+    --go-border: #24402f;
+    --danger: #f0655a;
+    --danger-weak: #2a1614;
+    --shadow-1: 0 1px 2px rgba(0, 0, 0, .3);
+    --shadow-2: 0 2px 10px rgba(0, 0, 0, .45);
+    --shadow-sheet: 0 -8px 24px rgba(0, 0, 0, .5);
+  }
+}
+
+:root[data-theme="dark"] {
+  --bg: #131316;
+  --surface: #1c1c21;
+  --surface-2: #26262d;
+  --surface-3: #1c1c21;
+  --text: #f2f2f4;
+  --text-dim: #9a9aa6;
+  --text-faint: #7c7c88;
+  --border: #34343e;
+  --border-strong: #45454f;
+  --accent: #a184f2;
+  --accent-strong: #b8a1f7;
+  --accent-weak: #241d3a;
+  --accent-text: #17171a;
+  --warn: #e0a33a;
+  --warn-ink: #f0bd63;
+  --warn-tint: #241d10;
+  --warn-track: #3d3320;
+  --go: #3fbd85;
+  --go-ink: #61d3a0;
+  --go-tint: #10231a;
+  --go-track: #20402f;
+  --go-border: #24402f;
+  --danger: #f0655a;
+  --danger-weak: #2a1614;
+  --shadow-1: 0 1px 2px rgba(0, 0, 0, .3);
+  --shadow-2: 0 2px 10px rgba(0, 0, 0, .45);
+  --shadow-sheet: 0 -8px 24px rgba(0, 0, 0, .5);
+}
+
+/* ==========================================================================
+   Base
+   ========================================================================== */
+
 * { box-sizing: border-box; }
+
+html { -webkit-text-size-adjust: 100%; }
 
 body {
   margin: 0;
   min-height: 100vh;
+  min-height: 100dvh;
   background: var(--bg);
   color: var(--text);
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  font-family: var(--sans);
+  font-size: 15px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
   display: flex;
-  justify-content: center;
-  align-items: flex-start;
-  padding: 24px 16px 60px;
+  flex-direction: column;
+  align-items: center;
+  padding: 20px 16px calc(72px + env(safe-area-inset-bottom));
+  transition: background-color .2s ease;
+}
+
+@media (min-width: 700px) {
+  body { padding-top: 56px; }
 }
 
 #app {
@@ -31,354 +154,759 @@ body {
   max-width: 420px;
 }
 
-.view.hidden { display: none; }
+a { color: var(--accent-strong); }
+a:hover { color: var(--accent); }
+
+.view.hidden,
+.hidden { display: none !important; }
 
 h1 {
-  font-size: 1.6rem;
-  margin: 0 0 4px;
+  margin: 0;
+  font: 600 15px/1.2 var(--sans);
+  letter-spacing: .01em;
+  color: var(--text);
 }
 
 .tagline {
+  margin: 4px 0 26px;
+  font-size: 13px;
   color: var(--text-dim);
-  margin: 0 0 24px;
-  font-size: 0.95rem;
 }
 
-.recent-rooms {
-  margin: 0 0 20px;
-  padding: 14px;
-  border-radius: var(--radius);
-  background: var(--surface);
-  border: 1px solid var(--border);
+/* Screen-reader-only: used to retain the native <select>s behind the chip UI. */
+.ct-sr-only {
+  position: absolute !important;
+  width: 1px; height: 1px;
+  padding: 0; margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
 }
 
-.recent-rooms .post-result-question {
-  margin: 0 0 10px;
-}
+/* ==========================================================================
+   Form controls
+   ========================================================================== */
 
 label {
   display: block;
-  font-size: 0.85rem;
+  margin: 24px 0 8px;
+  font: 600 12px/1 var(--sans);
+  letter-spacing: .04em;
+  text-transform: uppercase;
   color: var(--text-dim);
-  margin: 18px 0 6px;
 }
 
 input[type="text"],
 input[type="number"],
+input[type="time"],
+input[type="datetime-local"],
 select {
   width: 100%;
-  padding: 12px 14px;
-  border-radius: var(--radius);
+  min-height: 48px;
+  padding: 13px 15px;
   border: 1px solid var(--border);
+  border-radius: var(--r-control);
   background: var(--surface);
   color: var(--text);
-  font-size: 1rem;
+  font-family: var(--sans);
+  font-size: 15px;
+  box-shadow: var(--shadow-1);
+  transition: border-color .15s ease, box-shadow .15s ease;
 }
 
-input[type="text"]:focus,
-input[type="number"]:focus,
-select:focus {
+/* The question is the human part of the screen: serif, and bigger. */
+#question {
+  padding: 14px 16px;
+  border-radius: 12px;
+  font-family: var(--serif);
+  font-size: 21px;
+  line-height: 1.3;
+}
+#question::placeholder {
+  color: var(--text-faint);
+  opacity: 1;
+}
+
+.option-input { font-size: 15px; }
+
+input:focus-visible,
+select:focus-visible {
   outline: none;
   border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-weak);
 }
+
+input[type="checkbox"] {
+  width: 20px; height: 20px;
+  accent-color: var(--accent);
+  flex: none;
+}
+
+/* --- Mode toggle: a real segmented control ---------------------------- */
 
 .mode-toggle {
   display: flex;
-  gap: 8px;
-  margin-top: 18px;
+  gap: 3px;
+  margin-top: 24px;
+  padding: 3px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-control);
+  background: var(--surface-2);
 }
 
 .mode-btn {
   flex: 1;
+  min-height: 42px;
   padding: 10px;
-  border-radius: var(--radius);
-  border: 1px solid var(--border);
-  background: var(--surface);
+  border: none;
+  border-radius: 8px;
+  background: transparent;
   color: var(--text-dim);
-  font-size: 0.9rem;
+  font: 600 14px/1 var(--sans);
   cursor: pointer;
+  transition: background-color .15s ease, color .15s ease;
 }
 
 .mode-btn.active {
-  background: var(--accent);
-  border-color: var(--accent);
-  color: var(--accent-text);
+  background: var(--surface);
+  color: var(--text);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, .08);
 }
 
-#custom-options { margin-top: 14px; }
-#custom-options.hidden { display: none; }
-
+#custom-options { margin-top: 16px; }
 .option-row { margin-bottom: 8px; }
 
-.link-btn {
-  display: block;
-  background: none;
-  border: none;
-  color: var(--accent);
-  font-size: 0.85rem;
-  padding: 8px 0;
-  cursor: pointer;
-  text-align: left;
+/* --- Chip groups (built by redesign.js from the native selects) ------- */
+
+.ct-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  border-radius: var(--r-control);
 }
 
-.hidden { display: none !important; }
+.ct-chip {
+  min-height: 44px;
+  padding: 11px 16px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-pill);
+  background: var(--surface);
+  color: var(--text);
+  font: 600 14px/1 var(--sans);
+  cursor: pointer;
+  transition: border-color .15s ease, background-color .15s ease, color .15s ease;
+}
+
+.ct-chip[data-custom] {
+  border-style: dashed;
+  border-color: var(--border-strong);
+  background: transparent;
+  color: var(--text-dim);
+}
+
+.ct-chip[aria-pressed="true"] {
+  border-color: var(--accent);
+  background: var(--accent-weak);
+  color: var(--accent-strong);
+}
+
+.ct-chips--compact { gap: 4px; }
+.ct-chips--compact .ct-chip {
+  min-height: 40px;
+  padding: 9px 12px;
+  border-color: transparent;
+  background: transparent;
+  color: var(--text-dim);
+  font-size: 13px;
+}
+.ct-chips--compact .ct-chip[aria-pressed="true"] {
+  background: var(--accent-weak);
+  color: var(--accent-strong);
+}
+
+select:focus-visible + .ct-chips {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+}
+
+/* --- Advanced disclosure ---------------------------------------------- */
+
+#advanced-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  margin-top: 26px;
+  padding: 14px 16px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface);
+  color: var(--text);
+  font: 600 14px/1 var(--sans);
+  text-align: left;
+  cursor: pointer;
+  box-shadow: var(--shadow-1);
+}
+
+#advanced-toggle::after {
+  content: "⌄";
+  font-size: 14px;
+  color: var(--text-dim);
+  transition: transform .2s ease;
+}
+
+#advanced-toggle[aria-expanded="true"]::after { transform: rotate(180deg); }
+
+/* Summary line injected by redesign.js — tells you whether to open it. */
+.ct-advanced-summary {
+  display: block;
+  margin-top: 5px;
+  font: 400 12px/1.4 var(--sans);
+  color: var(--text-dim);
+}
+
+#advanced-panel {
+  margin-top: 8px;
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface-3);
+}
+
+#advanced-panel label:first-of-type { margin-top: 0; }
 
 .checkbox-row {
   display: flex;
   align-items: center;
-  gap: 8px;
-  font-size: 0.9rem;
+  gap: 12px;
+  margin: 0 0 16px;
+  font: 400 14px/1.35 var(--sans);
+  text-transform: none;
+  letter-spacing: 0;
   color: var(--text);
-  margin: 14px 0;
+  cursor: pointer;
 }
 
+.checkbox-row:last-of-type { margin-bottom: 4px; }
 .checkbox-row input { width: auto; margin: 0; }
 
+/* ==========================================================================
+   Buttons
+   ========================================================================== */
+
 .primary-btn {
+  display: block;
   width: 100%;
-  padding: 14px;
-  margin-top: 24px;
+  min-height: 54px;
+  margin-top: 26px;
+  padding: 16px;
   border: none;
-  border-radius: var(--radius);
+  border-radius: 14px;
   background: var(--accent);
   color: var(--accent-text);
-  font-size: 1.05rem;
-  font-weight: 600;
+  font: 700 17px/1 var(--sans);
   cursor: pointer;
+  box-shadow: var(--shadow-2);
+  transition: transform .12s ease, filter .15s ease;
 }
 
-.primary-btn:active { opacity: 0.85; }
+.primary-btn:hover { filter: brightness(1.06); }
+.primary-btn:active { transform: scale(.985); }
 
 .secondary-btn {
+  display: block;
   width: 100%;
-  padding: 12px;
-  margin-top: 14px;
-  border: 1px solid var(--accent);
-  border-radius: var(--radius);
-  background: transparent;
-  color: var(--accent);
-  font-size: 0.95rem;
-  font-weight: 600;
+  min-height: 50px;
+  margin-top: 10px;
+  padding: 15px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--surface);
+  color: var(--accent-strong);
+  font: 600 15px/1 var(--sans);
   cursor: pointer;
+  box-shadow: var(--shadow-1);
+  transition: transform .12s ease, border-color .15s ease;
 }
 
+.secondary-btn:hover { border-color: var(--border-strong); }
+.secondary-btn:active { transform: scale(.985); }
+
+/* Start and Share stop competing: stacked, not a 50/50 row. */
 .button-row {
   display: flex;
-  gap: 10px;
-  margin-top: 24px;
+  flex-direction: column;
+  gap: 0;
+  margin-top: 0;
+}
+.button-row .primary-btn { margin-top: 26px; }
+.button-row .secondary-btn { margin-top: 10px; }
+
+.link-btn {
+  display: block;
+  padding: 10px 0;
+  border: none;
+  background: none;
+  color: var(--accent-strong);
+  font: 600 14px/1 var(--sans);
+  text-align: left;
+  cursor: pointer;
+}
+.link-btn:hover { color: var(--accent); }
+
+#add-option {
+  width: 100%;
+  min-height: 48px;
+  padding: 12px 14px;
+  border: 1px dashed var(--border-strong);
+  border-radius: var(--r-control);
+  text-align: left;
 }
 
-.button-row .primary-btn,
-.button-row .secondary-btn {
-  margin-top: 0;
+button:focus-visible,
+a:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
 }
 
 .error {
-  color: var(--danger);
-  font-size: 0.85rem;
   margin-top: 12px;
+  font-size: 13px;
+  color: var(--danger);
 }
 
 .share-status {
   margin-top: 14px;
-  padding: 10px 14px;
-  border-radius: var(--radius);
-  background: var(--surface);
+  padding: 12px 14px;
   border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface);
   color: var(--text-dim);
-  font-size: 0.85rem;
+  font-size: 13px;
   text-align: center;
 }
 
-/* Group room */
+/* ==========================================================================
+   Theme toggle (injected by redesign.js)
+   ========================================================================== */
 
-.participant-bar {
-  max-width: 420px;
-  width: 100%;
-  margin: 0 0 16px;
-  padding: 8px 14px;
-  border-radius: var(--radius);
-  background: var(--surface);
+.ct-theme-btn {
+  position: fixed;
+  top: max(14px, env(safe-area-inset-top));
+  right: 14px;
+  z-index: 30;
+  width: 36px; height: 36px;
+  padding: 0;
   border: 1px solid var(--border);
-  color: var(--text-dim);
-  font-size: 0.8rem;
-  text-align: center;
+  border-radius: var(--r-pill);
+  background: linear-gradient(90deg, var(--text) 0 50%, var(--surface) 50% 100%);
+  cursor: pointer;
+  box-shadow: var(--shadow-1);
 }
 
-.option-btn {
+/* ==========================================================================
+   Recently active rooms — a shortcut strip, not a section
+   ========================================================================== */
+
+.recent-rooms {
+  margin: 0 0 26px;
+  padding: 0;
+  border: 0;
+  background: none;
+}
+
+.recent-rooms .post-result-question {
+  margin: 0 0 12px;
+  font: 600 11px/1 var(--mono);
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+}
+
+.recent-room-row,
+.recent-rooms button:not(.link-btn),
+.recent-rooms a {
   display: flex;
-  justify-content: space-between;
   align-items: center;
   gap: 10px;
+  width: 100%;
+  margin-bottom: 8px;
+  padding: 13px 14px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface);
+  color: var(--text);
+  font: 600 14px/1.3 var(--sans);
+  text-align: left;
+  text-decoration: none;
+  cursor: pointer;
+  box-shadow: var(--shadow-1);
 }
 
-.option-btn .tally {
+/* ==========================================================================
+   Group room chrome
+   ========================================================================== */
+
+.participant-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  max-width: 420px;
+  margin: 0 0 18px;
+  padding: 10px 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-pill);
+  background: var(--surface);
   color: var(--text-dim);
-  font-size: 0.85rem;
-  font-weight: 500;
-  flex-shrink: 0;
+  font: 500 12px/1 var(--sans);
+  text-align: left;
+  box-shadow: var(--shadow-1);
 }
 
-.option-btn.my-vote {
-  border-color: var(--accent);
-  background: var(--surface-2);
+.participant-bar::before {
+  content: "";
+  width: 7px; height: 7px;
+  flex: none;
+  border-radius: var(--r-pill);
+  background: var(--go);
 }
 
 .invite-more-btn {
-  display: block;
   width: 100%;
   max-width: 420px;
+  margin: 0 0 18px;
+  padding: 13px 14px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface);
   text-align: center;
-  margin: 0 0 16px;
+  box-shadow: var(--shadow-1);
 }
 
-/* Countdown view */
+/* ==========================================================================
+   Countdown
+   ========================================================================== */
 
 #view-countdown,
-#view-waiting {
-  text-align: center;
-}
+#view-waiting { text-align: center; }
 
 .question-display {
-  font-size: 1.3rem;
-  font-weight: 600;
-  margin: 8px 0 20px;
+  margin: 8px 0 22px;
+  font-family: var(--serif);
+  font-size: 21px;
+  font-weight: 400;
+  line-height: 1.3;
+  color: var(--text);
+  text-wrap: pretty;
+}
+
+#view-waiting .question-display { font-size: 22px; }
+
+/* --- The ring. Wrapper is created by redesign.js around #timer-display,
+       which keeps app.js's text/class writes untouched. --------------- */
+
+.timer-ring {
+  --p: 100;                     /* percent remaining, set per tick by JS */
+  --ring: var(--accent);
+  --ring-track: var(--surface-2);
+  width: 176px; height: 176px;
+  margin: 0 auto 22px;
+  border-radius: var(--r-pill);
+  background: conic-gradient(var(--ring) 0 calc(var(--p) * 1%), var(--ring-track) calc(var(--p) * 1%) 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: box-shadow .25s ease;
+}
+
+.timer-ring-inner {
+  width: 152px; height: 152px;
+  border-radius: var(--r-pill);
+  background: var(--bg);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  transition: background-color .2s ease;
 }
 
 .timer-display {
-  font-size: 4.5rem;
-  font-weight: 700;
+  margin: 0;
+  font-family: var(--mono);
+  font-size: 58px;
+  font-weight: 500;
   font-variant-numeric: tabular-nums;
-  margin: 0 0 8px;
-  transition: color 0.2s;
+  letter-spacing: -.04em;
+  line-height: 1;
+  color: var(--text);
+  transition: color .25s ease;
 }
 
-.timer-display.warning {
-  color: #ffb020;
+.timer-unit {
+  margin: 4px 0 0;
+  font: 400 11px/1 var(--mono);
+  letter-spacing: .1em;
+  color: var(--text-faint);
 }
 
+/* State: attention, from 40% remaining. */
+.timer-ring:has(.timer-display.warning) { --ring: var(--warn); --ring-track: var(--warn-track); }
+.timer-ring:has(.timer-display.warning) .timer-ring-inner { background: var(--warn-tint); }
+.timer-display.warning { color: var(--warn-ink); }
+.timer-ring:has(.timer-display.warning) .timer-unit { color: var(--warn); }
+
+/* State: now, last 5s. Green — the last state means go, not error. */
+.timer-ring:has(.timer-display.critical) {
+  --ring: var(--go);
+  --ring-track: var(--go-track);
+  box-shadow: 0 0 0 8px color-mix(in srgb, var(--go) 12%, transparent);
+}
+.timer-ring:has(.timer-display.critical) .timer-ring-inner { background: var(--go-tint); }
 .timer-display.critical {
-  color: var(--danger);
-  animation: pulse 0.6s infinite alternate;
+  color: var(--go-ink);
+  font-size: 64px;
+  animation: ct-breath .18s ease-out;
 }
+.timer-ring:has(.timer-display.critical) .timer-unit { color: var(--go); }
 
-body.timeout-flash {
-  animation: flash-bg 0.5s infinite alternate;
-}
-
-@keyframes pulse {
+/* One tick, one breath — a pulse, not a jolt. */
+@keyframes ct-breath {
   from { transform: scale(1); }
-  to { transform: scale(1.08); }
+  50%  { transform: scale(1.03); }
+  to   { transform: scale(1); }
 }
 
-@keyframes flash-bg {
-  from { background: var(--bg); }
-  to { background: var(--danger-dim); }
+/* State: locked. Ring empties to the track, nothing shouts. */
+.timer-ring[data-locked] {
+  --p: 0;
+  box-shadow: none;
+}
+.timer-ring[data-locked] .timer-ring-inner { background: var(--bg); }
+.timer-ring[data-locked] .timer-display { font-size: 44px; color: var(--text-dim); animation: none; }
+.timer-ring[data-locked] .timer-unit { color: var(--text-faint); }
+
+/* Timeout: one 200ms wash that HOLDS. No alternating flash — that reads as
+   an error and is a photosensitivity risk. */
+body.timeout-flash { background: var(--go-tint); }
+
+@media (prefers-reduced-motion: reduce) {
+  .timer-display.critical { animation: none; }
+  .timer-ring, .timer-ring-inner, body { transition: none; }
 }
 
 .extend-info {
+  margin: 0 0 18px;
+  font-size: 13px;
   color: var(--text-dim);
-  font-size: 0.85rem;
-  margin: 0 0 16px;
 }
+
+/* --- Options ---------------------------------------------------------- */
 
 .options-container {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 8px;
   margin-top: 12px;
 }
 
-#random-pick-btn {
-  display: block;
+.option-btn {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
   width: 100%;
-  max-width: 420px;
-  margin: 12px auto 0;
+  min-height: 54px;
+  padding: 15px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface);
+  color: var(--text);
+  font: 600 16px/1.25 var(--sans);
+  text-align: left;
+  cursor: pointer;
+  overflow: hidden;
+  box-shadow: var(--shadow-1);
+  transition: transform .12s ease, border-color .15s ease;
 }
+
+.option-btn:hover { border-color: var(--border-strong); }
+.option-btn:active { transform: scale(.99); border-color: var(--accent); }
+
+/* Group tallies read as a fill, so the room's lean is visible peripherally.
+   room.js sets --tally (0-100) or the width is left at 0. */
+.option-btn::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  width: calc(var(--tally, 0) * 1%);
+  background: var(--surface-2);
+  transition: width .3s ease;
+}
+
+.option-btn > * { position: relative; }
+
+.option-btn .tally {
+  flex: none;
+  font: 600 13px/1 var(--mono);
+  font-variant-numeric: tabular-nums;
+  color: var(--text-dim);
+}
+
+.option-btn.my-vote {
+  border-color: var(--accent);
+  background: var(--surface);
+}
+.option-btn.my-vote::before { background: var(--accent-weak); }
+.option-btn.my-vote .tally { color: var(--accent-strong); }
+
+/* --- Coin / dice: quiet inline action, not a rival to deciding -------- */
+
+#random-pick-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: auto;
+  min-height: 44px;
+  margin: 16px auto 0;
+  padding: 10px 14px;
+  border: none;
+  border-radius: var(--r-pill);
+  background: none;
+  color: var(--text-dim);
+  font: 500 13px/1 var(--sans);
+  box-shadow: none;
+}
+
+#random-pick-btn:hover { color: var(--text); background: var(--surface-2); }
+#random-pick-btn:active { transform: none; }
 
 .random-pick-icon {
   display: inline-block;
+  width: 13px;
+  height: 13px;
+  border: 1.5px solid currentColor;
 }
 
-.random-pick-icon.spinning {
-  animation: random-pick-spin 0.7s ease-out;
-}
+.random-pick-icon.is-coin { border-radius: var(--r-pill); }
+.random-pick-icon.is-dice { border-radius: 3px; }
+
+.random-pick-icon.spinning { animation: random-pick-spin .7s ease-out; }
 
 @keyframes random-pick-spin {
   from { transform: rotate(0deg) scale(1); }
-  50% { transform: rotate(720deg) scale(1.3); }
-  to { transform: rotate(1440deg) scale(1); }
+  50%  { transform: rotate(720deg) scale(1.25); }
+  to   { transform: rotate(1440deg) scale(1); }
 }
 
-.option-btn {
-  padding: 16px;
-  border-radius: var(--radius);
-  border: 1px solid var(--border);
-  background: var(--surface);
-  color: var(--text);
-  font-size: 1.05rem;
-  font-weight: 600;
-  cursor: pointer;
+@media (prefers-reduced-motion: reduce) {
+  .random-pick-icon.spinning { animation: none; }
 }
 
-.option-btn:active {
-  background: var(--surface-2);
+/* Extend sits BELOW the options so nothing above them ever reflows. */
+#extend-btn {
   border-color: var(--accent);
+  color: var(--accent-strong);
 }
 
-/* Result view */
+#countdown-share-btn {
+  margin: 14px auto 0;
+  text-align: center;
+  font-size: 13px;
+  color: var(--text-dim);
+}
+#countdown-share-btn:hover { color: var(--accent-strong); }
+
+/* ==========================================================================
+   Result
+   ========================================================================== */
 
 #view-result {
+  padding-top: 32px;
   text-align: center;
-  padding-top: 40px;
+}
+
+/* A receipt, not a trophy: the check becomes a small mark in a pill with
+   the resolution method, promoted ABOVE the answer by redesign.js. */
+.ct-method {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  margin-bottom: 22px;
+  padding: 6px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-pill);
+  background: var(--surface);
+  font: 600 11px/1 var(--mono);
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  box-shadow: var(--shadow-1);
 }
 
 .result-check {
-  font-size: 2.6rem;
-  line-height: 1;
-  color: #2ecc71;
+  width: 7px; height: 7px;
+  flex: none;
+  overflow: hidden;
+  border-radius: var(--r-pill);
+  background: var(--go);
+  color: transparent;         /* hides the ✓ glyph, keeps the node app.js pops */
+  font-size: 0;
   opacity: 0;
-  transform: scale(0.4);
-  margin-bottom: 4px;
+  transform: scale(.4);
 }
 
-.result-check.pop {
-  animation: successPop 0.45s ease-out forwards;
-}
+.result-check.pop { animation: successPop .4s ease-out forwards; }
 
 @keyframes successPop {
-  0% { opacity: 0; transform: scale(0.4); }
-  60% { opacity: 1; transform: scale(1.2); }
+  0%   { opacity: 0; transform: scale(.4); }
+  60%  { opacity: 1; transform: scale(1.35); }
   100% { opacity: 1; transform: scale(1); }
 }
 
+@media (prefers-reduced-motion: reduce) {
+  .result-check.pop { animation: none; opacity: 1; transform: none; }
+}
+
 .result-label {
+  margin: 0 0 6px;
+  font-size: 14px;
   color: var(--text-dim);
-  font-size: 1rem;
-  margin: 0 0 8px;
 }
 
 .result-answer {
-  font-size: 2.2rem;
-  font-weight: 700;
-  margin: 0 0 12px;
+  margin: 0 0 10px;
+  font-family: var(--serif);
+  font-size: 40px;
+  font-weight: 400;
+  line-height: 1.1;
+  letter-spacing: -.02em;
+  color: var(--text);
+  text-wrap: balance;
 }
 
 .result-meta {
-  color: var(--text-dim);
-  font-size: 0.85rem;
+  margin: 0;
+  font-size: 13px;
+  color: var(--text-faint);
 }
 
 .post-result-block {
-  margin-top: 28px;
-  padding-top: 20px;
+  margin-top: 26px;
+  padding-top: 22px;
   border-top: 1px solid var(--border);
 }
 
 .post-result-question {
-  color: var(--text-dim);
-  font-size: 0.9rem;
-  margin: 0 0 12px;
+  margin: 0 0 14px;
+  font-family: var(--serif);
+  font-size: 16px;
+  color: var(--text);
 }
 
 .chip-row {
@@ -389,103 +917,153 @@ body.timeout-flash {
 }
 
 .chip-btn {
-  padding: 8px 16px;
-  border-radius: 999px;
+  min-height: 44px;
+  padding: 11px 18px;
   border: 1px solid var(--border);
+  border-radius: var(--r-pill);
   background: var(--surface);
   color: var(--text);
-  font-size: 0.9rem;
+  font: 600 14px/1 var(--sans);
   cursor: pointer;
+  box-shadow: var(--shadow-1);
+  transition: border-color .15s ease, background-color .15s ease;
 }
+
+.chip-btn:hover { border-color: var(--border-strong); }
 
 .chip-btn.active {
   border-color: var(--accent);
-  background: var(--surface-2);
-  color: var(--accent);
+  background: var(--accent-weak);
+  color: var(--accent-strong);
 }
 
 .satisfaction-ack {
-  color: var(--text-dim);
-  font-size: 0.9rem;
+  margin: 0;
+  font: 600 14px/1.4 var(--sans);
+  color: var(--go-ink);
 }
 
 .follow-through-input {
   display: block;
-  width: 100%;
-  max-width: 220px;
-  margin: 12px auto 0;
-  padding: 10px 12px;
-  border-radius: var(--radius);
-  border: 1px solid var(--border);
-  background: var(--surface);
-  color: var(--text);
-  font-size: 0.95rem;
+  width: auto;
+  min-width: 160px;
+  max-width: 240px;
+  margin: 14px auto 0;
+  font-family: var(--mono);
+  font-variant-numeric: tabular-nums;
   text-align: center;
 }
 
 .calendar-links {
   display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 2px;
-  margin-top: 8px;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 18px;
+  margin-top: 14px;
 }
 
-/* Chat */
+.calendar-links .link-btn {
+  padding: 6px 0;
+  font-size: 13px;
+  text-align: center;
+}
+
+/* ==========================================================================
+   Chat — collapsed bar with a preview, expanded as a sheet
+   ========================================================================== */
 
 .chat-panel {
-  max-width: 420px;
   width: 100%;
+  max-width: 420px;
   margin: 20px 0 0;
-  border-radius: var(--radius);
-  background: var(--surface);
   border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface);
   overflow: hidden;
+  box-shadow: var(--shadow-1);
 }
 
 .chat-toggle {
   display: flex;
   align-items: center;
-  justify-content: center;
-  gap: 8px;
+  gap: 10px;
   width: 100%;
-  padding: 10px 14px;
-  background: none;
+  min-height: 46px;
+  padding: 12px 14px;
   border: none;
+  background: none;
   color: var(--text);
-  font-size: 0.9rem;
-  font-weight: 600;
+  font: 600 14px/1 var(--sans);
+  text-align: left;
   cursor: pointer;
 }
 
+.chat-toggle::after {
+  content: "⌃";
+  margin-left: auto;
+  font-size: 13px;
+  color: var(--text-dim);
+  transition: transform .2s ease;
+}
+
+.chat-toggle[aria-expanded="true"]::after { transform: rotate(180deg); }
+
+/* The dot becomes a count when redesign.js has one. */
 .chat-unread-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 8px; height: 8px;
+  border-radius: var(--r-pill);
   background: var(--accent);
+  font: 600 10px/1 var(--sans);
+  color: var(--accent-text);
+}
+
+.chat-unread-dot[data-count] {
+  min-width: 17px; height: 17px;
+  padding: 0 5px;
+}
+
+/* Last message, so you can decide whether to open it. */
+.ct-chat-preview {
+  min-width: 0;
+  flex: 1;
+  overflow: hidden;
+  font: 400 13px/1 var(--sans);
+  color: var(--text-faint);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.chat-toggle[aria-expanded="true"] .ct-chat-preview { display: none; }
+
+.chat-body {
+  border-top: 1px solid var(--surface-2);
 }
 
 .chat-messages {
-  max-height: 220px;
-  overflow-y: auto;
-  padding: 0 14px;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 12px;
+  max-height: 220px;
+  padding: 16px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
 }
 
 .chat-empty {
+  margin: 4px 0;
+  font-size: 13px;
   color: var(--text-dim);
-  font-size: 0.85rem;
   text-align: center;
-  margin: 8px 0;
 }
 
 .chat-message {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  max-width: 85%;
+  max-width: 82%;
 }
 
 .chat-message-own {
@@ -494,52 +1072,73 @@ body.timeout-flash {
 }
 
 .chat-message-sender {
-  color: var(--text-dim);
-  font-size: 0.72rem;
-  margin-bottom: 2px;
+  margin-bottom: 3px;
+  font-size: 11px;
+  color: var(--text-faint);
 }
 
 .chat-message-text {
-  padding: 6px 10px;
-  border-radius: 12px;
+  padding: 8px 12px;
+  border-radius: 14px 14px 14px 4px;
   background: var(--surface-2);
-  font-size: 0.9rem;
+  font-size: 14px;
+  line-height: 1.4;
   word-break: break-word;
 }
 
 .chat-message-own .chat-message-text {
+  border-radius: 14px 14px 4px 14px;
   background: var(--accent);
   color: var(--accent-text);
 }
 
-#chat-error {
-  padding: 0 14px;
-  margin: 8px 0 0;
-}
+#chat-error { padding: 0 16px; margin: 8px 0 0; }
 
 .chat-form {
   display: flex;
   gap: 8px;
-  padding: 10px 14px 14px;
+  padding: 12px 16px calc(16px + env(safe-area-inset-bottom));
+  border-top: 1px solid var(--surface-2);
 }
 
 .chat-input {
   flex: 1;
-  padding: 8px 12px;
-  border-radius: 999px;
-  border: 1px solid var(--border);
-  background: var(--surface-2);
-  color: var(--text);
-  font-size: 0.9rem;
+  width: auto;
+  min-height: 44px;
+  padding: 11px 14px;
+  border-radius: var(--r-pill);
+  background: var(--surface-3);
+  font-size: 14px;
+  box-shadow: none;
 }
 
 .chat-send-btn {
-  padding: 8px 16px;
-  border-radius: 999px;
+  min-height: 44px;
+  padding: 11px 18px;
   border: none;
+  border-radius: var(--r-pill);
   background: var(--accent);
   color: var(--accent-text);
-  font-size: 0.9rem;
-  font-weight: 600;
+  font: 600 14px/1 var(--sans);
   cursor: pointer;
+}
+
+/* On phones the chat docks to the bottom, so opening it never pushes the
+   options out from under your thumb mid-countdown. */
+@media (max-width: 560px) {
+  body:has(.chat-panel:not(.hidden)) { padding-bottom: 92px; }
+
+  .chat-panel {
+    position: fixed;
+    left: 0; right: 0; bottom: 0;
+    z-index: 20;
+    max-width: none;
+    margin: 0;
+    border: 0;
+    border-top: 1px solid var(--border);
+    border-radius: 18px 18px 0 0;
+    box-shadow: var(--shadow-sheet);
+  }
+
+  .chat-messages { max-height: 40vh; }
 }

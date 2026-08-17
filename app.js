@@ -224,7 +224,9 @@
     stopBeeping();
 
     const isCoin = state.options.length === 2;
-    els.randomPickIcon.textContent = isCoin ? '🪙' : '🎲';
+    els.randomPickIcon.textContent = '';
+    els.randomPickIcon.classList.toggle('is-coin', isCoin);
+    els.randomPickIcon.classList.toggle('is-dice', !isCoin);
     els.randomPickIcon.classList.remove('spinning');
     els.randomPickLabel.textContent = isCoin ? 'Toss a coin' : 'Roll the dice';
     els.randomPickBtn.disabled = false;

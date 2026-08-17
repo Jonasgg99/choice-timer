@@ -505,6 +505,9 @@ function renderOptionsWithTallies(container, options, votes, onVote) {
     tally.className = "tally";
     tally.textContent = counts[i] > 0 ? `${counts[i]} vote${counts[i] === 1 ? "" : "s"}` : "";
 
+    const total = counts.reduce((sum, c) => sum + c, 0);
+    btn.style.setProperty("--tally", total ? (counts[i] / total) * 100 : 0);
+
     btn.appendChild(label);
     btn.appendChild(tally);
     btn.addEventListener("click", () => onVote(i));
@@ -569,7 +572,9 @@ function renderRoom() {
 
     if (iAmHost) {
       const isCoin = room.options.length === 2;
-      $("random-pick-icon").textContent = isCoin ? "🪙" : "🎲";
+      $("random-pick-icon").textContent = "";
+      $("random-pick-icon").classList.toggle("is-coin", isCoin);
+      $("random-pick-icon").classList.toggle("is-dice", !isCoin);
       $("random-pick-icon").classList.remove("spinning");
       $("random-pick-label").textContent = isCoin ? "Toss a coin" : "Roll the dice";
       randomPickBtn.disabled = false;
