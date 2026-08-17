@@ -964,6 +964,12 @@ body.timeout-flash { background: var(--go-tint); }
   color: var(--go-ink);
 }
 
+#satisfaction-retry-btn {
+  margin: 10px auto 0;
+  text-align: center;
+  font-size: 13px;
+}
+
 .follow-through-input {
   display: block;
   width: auto;

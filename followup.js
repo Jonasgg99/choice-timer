@@ -7,6 +7,7 @@
 
   const satisfactionButtons = $('satisfaction-buttons');
   const satisfactionAck = $('satisfaction-ack');
+  const satisfactionRetryBtn = $('satisfaction-retry-btn');
   const chips = document.querySelectorAll('#follow-through-chips .chip-btn');
   const timeInput = $('follow-through-time');
   const datetimeInput = $('follow-through-datetime');
@@ -29,10 +30,14 @@
         : "That's alright. You still get to move on.";
     }
     satisfactionAck.classList.remove('hidden');
+    // Only solo mode reaches this block at all (group results hide it via
+    // reset({ showPersonal: false })), so window.__choiceTimer is always set.
+    satisfactionRetryBtn.classList.toggle('hidden', kind !== 'no');
   }
 
   $('satisfaction-yes').addEventListener('click', () => showAck('yes'));
   $('satisfaction-no').addEventListener('click', () => showAck('no'));
+  satisfactionRetryBtn.addEventListener('click', () => window.__choiceTimer.retryCountdown());
 
   function pad(n) {
     return String(n).padStart(2, '0');
@@ -139,6 +144,7 @@
 
       satisfactionButtons.classList.remove('hidden');
       satisfactionAck.classList.add('hidden');
+      satisfactionRetryBtn.classList.add('hidden');
       chips.forEach((c) => c.classList.remove('active'));
       hideInputsAndLinks();
       if (icsLink.dataset.blobUrl) {

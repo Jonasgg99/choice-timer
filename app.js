@@ -54,6 +54,8 @@
     options: [],
     endTime: null,
     timedOut: false,
+    durationMs: 0,
+    maxExtensions: 0,
     extensionsRemaining: 0,
     extensionMs: 15000,
     autoPick: false,
@@ -193,7 +195,9 @@
     state.question = question;
     state.options = options;
     state.autoPick = els.autoPick.checked;
-    state.extensionsRemaining = parseInt(els.maxExtensions.value, 10);
+    state.durationMs = durationMs;
+    state.maxExtensions = parseInt(els.maxExtensions.value, 10);
+    state.extensionsRemaining = state.maxExtensions;
     state.extensionMs = parseInt(els.extensionLength.value, 10) * 1000;
 
     startCountdown(durationMs);
@@ -420,6 +424,12 @@
       state.rafId = null;
       stopBeeping();
       document.body.classList.remove('timeout-flash');
+    },
+    // Re-run the same question with a fresh countdown, from "Not really" on
+    // the result screen — same duration and extensions as the original run.
+    retryCountdown() {
+      state.extensionsRemaining = state.maxExtensions;
+      startCountdown(state.durationMs);
     },
   };
 
