@@ -43,7 +43,7 @@
         },
 
         "state": {
-          ".write": "auth != null && (auth.uid === root.child('rooms').child($roomId).child('hostUid').val() || ((newData.val() === 'timeout_waiting' || newData.val() === 'result') && data.val() !== 'result' && data.parent().child('endTime').val() <= now))",
+          ".write": "auth != null && (auth.uid === root.child('rooms').child($roomId).child('hostUid').val() || (root.child('rooms').child($roomId).child('participants').child(auth.uid).exists() && (newData.val() === 'timeout_waiting' || newData.val() === 'result') && data.val() !== 'result' && data.parent().child('endTime').val() <= now))",
           ".validate": "newData.isString() && (newData.val() === 'waiting' || newData.val() === 'countdown' || newData.val() === 'timeout_waiting' || newData.val() === 'result')"
         },
         "endTime": {
@@ -54,7 +54,7 @@
           ".validate": "newData.val() === null || newData.isNumber()"
         },
         "result": {
-          ".write": "auth != null && (auth.uid === root.child('rooms').child($roomId).child('hostUid').val() || (data.parent().child('state').val() !== 'result' && data.parent().child('endTime').val() <= now))",
+          ".write": "auth != null && (auth.uid === root.child('rooms').child($roomId).child('hostUid').val() || (root.child('rooms').child($roomId).child('participants').child(auth.uid).exists() && data.parent().child('state').val() !== 'result' && data.parent().child('endTime').val() <= now))",
           ".validate": "newData.val() === null || (newData.hasChild('answer') && newData.hasChild('meta') && newData.child('answer').isString() && newData.child('answer').val().length <= 200)"
         },
 
